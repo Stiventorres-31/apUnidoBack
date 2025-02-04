@@ -17,7 +17,7 @@ return new class extends Migration
            
 
             $table->string("nombre_inmueble");
-            $table->string("referencia_material");
+            $table->string("referencia_material",10);
             $table->string("numero_identificacion",20);
             
             $table->decimal("costo_material",10,2);
