@@ -26,7 +26,7 @@ class LoginController extends Controller
             return ResponseHelper::error(422, "No se ha podido iniciar sesion", []);
         }
 
-        return ResponseHelper::success(422, "Se ha iniciado sesión con exito", [
+        return ResponseHelper::success(200, "Se ha iniciado sesión con exito", [
             'token' => $token,
             'user' => auth::user()
         ]);
