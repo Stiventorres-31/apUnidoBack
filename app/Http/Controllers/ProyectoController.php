@@ -19,7 +19,7 @@ class ProyectoController extends Controller
 
 
 
-        return ResponseHelper::success(200, "Listado de proyectos", ["proyecto" => $proyectos]);
+        return ResponseHelper::success(200, "Listado de proyectos", ["proyectos" => $proyectos]);
     }
     public function store(Request $request)
     {
