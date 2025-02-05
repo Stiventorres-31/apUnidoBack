@@ -50,7 +50,7 @@ class ProyectoController extends Controller
         $proyecto->estado = "A";
         $proyecto->save();
 
-        return ResponseHelper::error(201, "Se ha creado con exito", ["proyecto" => $proyecto]);
+        return ResponseHelper::success(201, "Se ha creado con exito", ["proyecto" => $proyecto]);
     }
     public function show($codigo_proyecto)
     {
