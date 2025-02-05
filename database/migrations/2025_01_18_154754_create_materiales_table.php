@@ -13,7 +13,7 @@ return new class extends Migration
     {
         Schema::create('materiales', function (Blueprint $table) {
             $table->id();
-            $table->string("referencia_material", 10)->unique();
+            $table->string("referencia_material", 10);
             $table->string("nombre_material", 255);
             
             $table->char("estado",1)->default("A");
