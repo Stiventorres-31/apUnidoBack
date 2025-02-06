@@ -29,7 +29,7 @@ class Inmueble extends Model
 
     }
     public function proyecto(){
-        return $this->belongsTo(Proyecto::class,"codigo_proyecto","codigo_proyecto");
+        return $this->belongsToMany(Proyecto::class,"codigo_proyecto","codigo_proyecto");
     }
     public function usuario(){
         return $this->belongsTo(User::class,"numero_identificacion","numero_identificacion");
@@ -40,19 +40,19 @@ class Inmueble extends Model
     public function asignaciones(){
         return $this->hasMany(Asignacione::class,"nombre_inmueble","nombre_inmueble");
     }
-    public function toArray()
-    {
-        return [
-            'id'=>$this->id,
+    // public function toArray()
+    // {
+    //     return [
+    //         'id'=>$this->id,
           
-            'nombre_inmueble' => $this->nombre_inmueble,
-            'numero_identificacion' => $this->numero_identificacion,
-            'codigo_proyecto' => $this->codigo_proyecto,
-            'estado' => $this->estado,
-            "tipo_inmueble"=>$this->tipo_inmueble,
-            'usuario' => $this->usuario ? $this->usuario->toArray() : [],
-            "presupuestos"=> $this->presupuestos ? $this->presupuestos->toArray() : [],
-            "asignaciones"=>$this->asignaciones ? $this->asignaciones->toArray():[]
-        ];
-    }
+    //         'nombre_inmueble' => $this->nombre_inmueble,
+    //         'numero_identificacion' => $this->numero_identificacion,
+    //         'codigo_proyecto' => $this->codigo_proyecto,
+    //         'estado' => $this->estado,
+    //         "tipo_inmueble"=>$this->tipo_inmueble,
+    //         'usuario' => $this->usuario ? $this->usuario->toArray() : [],
+    //         "presupuestos"=> $this->presupuestos ? $this->presupuestos->toArray() : [],
+    //         "asignaciones"=>$this->asignaciones ? $this->asignaciones->toArray():[]
+    //     ];
+    // }
 }

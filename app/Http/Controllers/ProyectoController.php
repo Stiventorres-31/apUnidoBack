@@ -3,10 +3,12 @@
 namespace App\Http\Controllers;
 
 use App\Helpers\ResponseHelper;
+use App\Models\Presupuesto;
 use App\Models\Proyecto;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
 use League\Csv\Writer;
@@ -16,7 +18,35 @@ class ProyectoController extends Controller
     public function index()
     {
         $proyectos = Proyecto::all();
-        return ResponseHelper::success(200, "Listado de proyectos", ["proyectos" => $proyectos]);
+
+
+        $totales = DB::table('proyectos')
+            ->leftJoin('presupuestos', 'proyectos.codigo_proyecto', '=', 'presupuestos.codigo_proyecto')
+            ->select(
+                "proyectos.id",
+                "proyectos.codigo_proyecto",
+                "proyectos.departamento_proyecto",
+                "proyectos.ciudad_municipio_proyecto",
+                "proyectos.direccion_proyecto",
+                "proyectos.numero_identificacion",
+                "proyectos.estado",
+                DB::raw('COALESCE(SUM(presupuestos.subtotal), 0) as total_presupuesto') // Si no hay presupuesto, devuelve 0
+            )
+            ->groupBy(
+                'proyectos.codigo_proyecto',
+                'proyectos.departamento_proyecto',
+                'proyectos.ciudad_municipio_proyecto',
+                'proyectos.direccion_proyecto',
+                'proyectos.numero_identificacion',
+                'proyectos.estado'
+            )
+            ->get();
+
+
+
+
+
+        return ResponseHelper::success(200, "Listado de proyectos", ["proyectos" => $totales]);
     }
     public function store(Request $request)
     {
@@ -51,14 +81,20 @@ class ProyectoController extends Controller
     }
     public function show($codigo_proyecto)
     {
+   
         $proyecto = Proyecto::with('inmuebles.presupuestos')->find($codigo_proyecto);
 
         if (!$proyecto) {
-
             return ResponseHelper::error(404, "Proyecto no encontrado");
         }
-
-        return ResponseHelper::success(200, "Proyecto obtenido", ["proyecto" => $proyecto]);
+        
+       
+        $totalPresupuesto = $proyecto->inmuebles->flatMap(fn($inmueble) => $inmueble->presupuestos)->sum(fn($presupuesto) => $presupuesto->subtotal);
+        
+        return ResponseHelper::success(200, "Proyecto obtenido", 
+            ["proyecto" =>  ["total_presupuesto" => $totalPresupuesto]+$proyecto->toArray()]
+        );
+        
     }
 
     public function update(Request $request, $codigo_proyecto)
@@ -155,8 +191,6 @@ class ProyectoController extends Controller
         Storage::put($filePath, $csvContent);
 
         return ResponseHelper::success(201, "El reporte se ha generado y guardado correctamente", ["proyecto" => $filePath]);
-
-     
     }
 
     public function destroy(Request $request)
@@ -165,10 +199,9 @@ class ProyectoController extends Controller
             "codigo_proyecto" => "required|exists:proyectos,codigo_proyecto|min:4"
         ]);
         if ($validator->fails()) {
-          
 
-            return ResponseHelper::error(422,$validator->errors()->first(),$validator->errors());
 
+            return ResponseHelper::error(422, $validator->errors()->first(), $validator->errors());
         }
         $proyecto = Proyecto::find($request->codigo_proyecto);
 
@@ -181,11 +214,11 @@ class ProyectoController extends Controller
         //     ], 404);
         // }
         if ($proyecto->estado === 'F') {
-            return ResponseHelper::error(403,"Este proyecto no se puede eliminar");
+            return ResponseHelper::error(403, "Este proyecto no se puede eliminar");
         }
 
         $proyecto->update(["estado" => "E"]);
 
-        return ResponseHelper::success(200,"Se ha eliminado con exito");
+        return ResponseHelper::success(200, "Se ha eliminado con exito");
     }
 }

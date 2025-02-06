@@ -11,23 +11,26 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('asignaciones', function (Blueprint $table) {
-           
-            $table->string("numero_identificacion", 20);
-            $table->string("referencia_material",10);
+        Schema::create('asignaciones', function (Blueprint $table) {        
+
             $table->string("nombre_inmueble");
+            $table->string("referencia_material",10);
+            $table->string("numero_identificacion",20);
+            
+            $table->decimal("costo_material",10,2);
+            $table->decimal("subtotal",10,2);
+            $table->float("cantidad_material");
             $table->string("codigo_proyecto");
 
-            $table->float("cantidad_material");
-            $table->decimal("costo_material");
+            $table->unsignedBigInteger("consecutivo",false);
+            // $table->char("estado",1)->default("A");
 
-            $table->primary(["referencia_material", "nombre_inmueble", "codigo_proyecto"]);
-           
-            $table->char("estado",1)->default("A");
-            $table->foreign('numero_identificacion')->references("numero_identificacion")->on("usuarios");
-            $table->foreign('referencia_material')->references("referencia_material")->on("materiales");
+            $table->primary(["nombre_inmueble","codigo_proyecto"]);
+
             $table->foreign("nombre_inmueble")->references("nombre_inmueble")->on("inmuebles");
+            $table->foreign("referencia_material")->references("referencia_material")->on("materiales");
             $table->foreign("codigo_proyecto")->references("codigo_proyecto")->on("proyectos");
+            $table->foreign("numero_identificacion")->references("numero_identificacion")->on(table: "usuarios");
             $table->timestamps();
         });
     }

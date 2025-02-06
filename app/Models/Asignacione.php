@@ -12,7 +12,7 @@ class Asignacione extends Model
 
     protected $table = 'asignaciones';
 
-    protected $primaryKey = ['numero_identificacion', 'referencia_material', 'id_inmueble', 'codigo_proyecto'];
+    protected $primaryKey = ['numero_identificacion', 'id_inmueble'];
     public $incrementing = false;
     public $timestamps = true;
 

@@ -134,7 +134,7 @@ class PresupuestoController extends Controller
                 "consecutivo" => $inventario->consecutivo,
                 "costo_material" => $inventario->costo,
                 "cantidad_material" => $material["cantidad_material"],
-                "subtotal" => ($inventario->costo * $inventario->cantidad),
+                "subtotal" => floatval($inventario->costo * $material["cantidad_material"]),
 
                 "numero_identificacion" => $numero_identificacion,
                 'created_at' => Carbon::now(),
