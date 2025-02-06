@@ -95,7 +95,7 @@ class TipoInmuebleController extends Controller
 
         $tipo_inmueble = TipoInmueble::find($id);
 
-        $tipo_inmueble->estado = "E";
+        $tipo_inmueble->estado = ($tipo_inmueble->estado === "E") ? "A": "E";
         $tipo_inmueble->save();
       
 
