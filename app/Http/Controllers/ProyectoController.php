@@ -16,9 +16,6 @@ class ProyectoController extends Controller
     public function index()
     {
         $proyectos = Proyecto::all();
-
-
-
         return ResponseHelper::success(200, "Listado de proyectos", ["proyectos" => $proyectos]);
     }
     public function store(Request $request)
