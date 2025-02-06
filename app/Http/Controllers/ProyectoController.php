@@ -17,10 +17,10 @@ class ProyectoController extends Controller
 {
     public function index()
     {
-        $proyectos = Proyecto::all();
 
 
-        $totales = DB::table('proyectos')
+
+        $proyectos = DB::table('proyectos')
             ->leftJoin('presupuestos', 'proyectos.codigo_proyecto', '=', 'presupuestos.codigo_proyecto')
             ->select(
                 "proyectos.id",
@@ -30,7 +30,7 @@ class ProyectoController extends Controller
                 "proyectos.direccion_proyecto",
                 "proyectos.numero_identificacion",
                 "fecha_inicio_proyecto",
-        "fecha_final_proyecto",
+                "fecha_final_proyecto",
                 "proyectos.estado",
                 DB::raw('COALESCE(SUM(presupuestos.subtotal), 0) as total_presupuesto') // Si no hay presupuesto, devuelve 0
             )
@@ -43,13 +43,10 @@ class ProyectoController extends Controller
                 'proyectos.estado'
             )
             ->get();
-
-
-
-
-
-        return ResponseHelper::success(200, "Listado de proyectos", ["proyectos" => $totales]);
+        return ResponseHelper::success(200, "Listado de proyectos", ["proyectos" => $proyectos]);
     }
+
+   
     public function store(Request $request)
     {
         $validateData = Validator::make($request->all(), [
@@ -83,20 +80,38 @@ class ProyectoController extends Controller
     }
     public function show($codigo_proyecto)
     {
-   
+
         $proyecto = Proyecto::with('inmuebles.presupuestos')->find($codigo_proyecto);
 
         if (!$proyecto) {
             return ResponseHelper::error(404, "Proyecto no encontrado");
         }
-        
+
        
-        $totalPresupuesto = $proyecto->inmuebles->flatMap(fn($inmueble) => $inmueble->presupuestos)->sum(fn($presupuesto) => $presupuesto->subtotal);
-        
-        return ResponseHelper::success(200, "Proyecto obtenido", 
-            ["proyecto" =>  ["total_presupuesto" => $totalPresupuesto]+$proyecto->toArray()]
-        );
-        
+        $proyectoArray = $proyecto->toArray();
+
+      
+        foreach ($proyectoArray['inmuebles'] as &$inmueble) {
+            $inmueble['total_presupuesto'] = collect($inmueble['presupuestos'])->sum('subtotal');
+            unset($inmueble['presupuestos']);
+        }
+
+        return ResponseHelper::success(200, "Proyecto obtenido", ["proyecto" => $proyectoArray]);
+
+
+        // $proyecto = Proyecto::with('inmuebles.presupuestos')->find($codigo_proyecto);
+
+        // if (!$proyecto) {
+        //     return ResponseHelper::error(404, "Proyecto no encontrado");
+        // }
+
+
+        // $totalPresupuesto = $proyecto->inmuebles->flatMap(fn($inmueble) => $inmueble->presupuestos)->sum(fn($presupuesto) => $presupuesto->subtotal);
+
+        // return ResponseHelper::success(200, "Proyecto obtenido", 
+        //     ["proyecto" =>  ["total_presupuesto" => $totalPresupuesto]+$proyecto->toArray()]
+        // );
+
     }
 
     public function update(Request $request, $codigo_proyecto)

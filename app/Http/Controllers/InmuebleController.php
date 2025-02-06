@@ -16,7 +16,7 @@ class InmuebleController extends Controller
 {
     public function index()
     {
-        $inmueble = Inmueble::all();
+        $inmueble = Inmueble::with("usuario")->all();
         return ResponseHelper::success(201, "Todos los inmuebles", ["inmueble" => $inmueble]);
     }
     public function show($id)
