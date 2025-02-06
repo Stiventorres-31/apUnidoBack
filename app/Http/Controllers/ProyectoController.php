@@ -29,6 +29,8 @@ class ProyectoController extends Controller
                 "proyectos.ciudad_municipio_proyecto",
                 "proyectos.direccion_proyecto",
                 "proyectos.numero_identificacion",
+                "fecha_inicio_proyecto",
+        "fecha_final_proyecto",
                 "proyectos.estado",
                 DB::raw('COALESCE(SUM(presupuestos.subtotal), 0) as total_presupuesto') // Si no hay presupuesto, devuelve 0
             )
