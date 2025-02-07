@@ -47,6 +47,7 @@ Route::middleware('auth:api')->prefix('materiale')->group(function(){
 Route::middleware('auth:api')->prefix("proyecto")->group(function(){
     Route::get("/", [ProyectoController::class,'index']);
     Route::get("/{codigo_proyecto}", [ProyectoController::class,'show']);
+    Route::get("/presupuesto/{codigo_proyecto}", [ProyectoController::class,'showWithPresupuesto']);
     Route::post("/", [ProyectoController::class,'store']);
     Route::put("/{codigo_proyecto}", [ProyectoController::class,'update']);
     Route::delete("/", [ProyectoController::class,'destroy']);
@@ -81,7 +82,7 @@ Route::middleware('auth:api')->prefix('presupuesto')->group(function(){
 
 Route::middleware('auth:api')->prefix('asignacion')->group(function(){
     Route::post("/",[AsignacioneController::class,"store"]);
-    Route::delete("/",[AsignacioneController::class,"destroy"]);
+    // Route::delete("/",[AsignacioneController::class,"destroy"]);
 });
 
 Route::middleware('auth:api')->prefix('inventario')->group(function(){

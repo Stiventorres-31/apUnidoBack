@@ -78,6 +78,41 @@ class ProyectoController extends Controller
 
         return ResponseHelper::success(201, "Se ha creado con exito", ["proyecto" => $proyecto]);
     }
+    public function showWithPresupuesto($codigo_proyecto)
+    {
+
+        $proyecto = Proyecto::with('inmuebles.presupuestos')->find($codigo_proyecto);
+
+        if (!$proyecto) {
+            return ResponseHelper::error(404, "Proyecto no encontrado");
+        }
+
+       
+        $proyectoArray = $proyecto->toArray();
+
+      
+        foreach ($proyectoArray['inmuebles'] as &$inmueble) {
+            $inmueble['total_presupuesto'] = collect($inmueble['presupuestos'])->sum('subtotal');
+            // unset($inmueble['presupuestos']);
+        }
+
+        return ResponseHelper::success(200, "Proyecto obtenido", ["proyecto" => $proyectoArray]);
+
+
+        // $proyecto = Proyecto::with('inmuebles.presupuestos')->find($codigo_proyecto);
+
+        // if (!$proyecto) {
+        //     return ResponseHelper::error(404, "Proyecto no encontrado");
+        // }
+
+
+        // $totalPresupuesto = $proyecto->inmuebles->flatMap(fn($inmueble) => $inmueble->presupuestos)->sum(fn($presupuesto) => $presupuesto->subtotal);
+
+        // return ResponseHelper::success(200, "Proyecto obtenido", 
+        //     ["proyecto" =>  ["total_presupuesto" => $totalPresupuesto]+$proyecto->toArray()]
+        // );
+
+    }
     public function show($codigo_proyecto)
     {
 
@@ -99,18 +134,6 @@ class ProyectoController extends Controller
         return ResponseHelper::success(200, "Proyecto obtenido", ["proyecto" => $proyectoArray]);
 
 
-        // $proyecto = Proyecto::with('inmuebles.presupuestos')->find($codigo_proyecto);
-
-        // if (!$proyecto) {
-        //     return ResponseHelper::error(404, "Proyecto no encontrado");
-        // }
-
-
-        // $totalPresupuesto = $proyecto->inmuebles->flatMap(fn($inmueble) => $inmueble->presupuestos)->sum(fn($presupuesto) => $presupuesto->subtotal);
-
-        // return ResponseHelper::success(200, "Proyecto obtenido", 
-        //     ["proyecto" =>  ["total_presupuesto" => $totalPresupuesto]+$proyecto->toArray()]
-        // );
 
     }
 
