@@ -139,7 +139,7 @@ class ProyectoController extends Controller
         ]);
 
         if ($validator->fails()) {
-            return ResponseHelper::success(422, $validator->errors()->first(), $validator->errors());
+            return ResponseHelper::error(422, $validator->errors()->first(), $validator->errors());
         }
 
         $proyecto->departamento_proyecto = strtoupper($request->departamento_proyecto);
@@ -153,7 +153,7 @@ class ProyectoController extends Controller
         $proyecto->fecha_final_proyecto = $request->fecha_inicio_proyecto;
         $proyecto->save();
 
-        return ResponseHelper::error(200, "Se ha actualizado con exto", ["proyecto" => $proyecto]);
+        return ResponseHelper::success(200, "Se ha actualizado con exto", ["proyecto" => $proyecto]);
     }
 
     public function generateCSV($codigo_proyecto)
