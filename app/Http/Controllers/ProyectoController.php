@@ -244,7 +244,7 @@ class ProyectoController extends Controller
 
         $ValidarExistenciaPresupuesto = Presupuesto::where("codigo_proyecto", "=", $proyecto->codigo_proyecto)->exists();
 
-        if (!$ValidarExistenciaPresupuesto) {
+        if ($ValidarExistenciaPresupuesto) {
             return ResponseHelper::error(403, "Este proyecto no se puede eliminar porque tiene inmuebles con presupuesto");
         }
 
