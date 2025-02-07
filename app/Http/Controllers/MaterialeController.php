@@ -127,29 +127,28 @@ class MaterialeController extends Controller
         return ResponseHelper::success(200,"Material actualizado exitosamente", ['materiale' => $materiale]);
     }
 
-    public function destroy($referencia_material)
+    public function destroy(Request $request)
     {
 
 
-        $validateData = Validator::make(["referencia_material" => $referencia_material], [
+        $validateData = Validator::make($request->all(), [
             "referencia_material" => "required|exists:materiales,referencia_material"
         ]);
 
         if ($validateData->fails()) {
-            
-
+        
             return ResponseHelper::error(422,$validateData->errors()->first(),$validateData->errors());
         }
 
 
-        $asignacion = Asignacione::where("referencia_material", "=", $referencia_material)->first();
+        $asignacion = Asignacione::where("referencia_material", "=", $request->referencia_material)->first();
 
         if ($asignacion) {
             
-            return ResponseHelper::error(401,"No se puede eliminar este material");
+            return ResponseHelper::error(400,"No se puede eliminar este material");
         }
 
-        $materiale = Materiale::where("referencia_material", "=", $referencia_material)->first();
+        $materiale = Materiale::where("referencia_material", "=", $request->referencia_material)->first();
 
 
         // Actualizar el estado a "E" (Eliminado o Inactivo)
@@ -157,7 +156,7 @@ class MaterialeController extends Controller
         $materiale->save();
 
       
-        return ResponseHelper::success(200,"e ha eliminado el material correctamente");
+        return ResponseHelper::success(200,"Se ha eliminado el material correctamente");
     }
 
     public function storeInventario(Request $request)

@@ -97,9 +97,9 @@ class UserController extends Controller
         return ResponseHelper::success(200,"Usuario ha actualizado exitosamente.",["usuario" => $usuario]);
     }
 
-    public function destroy($numero_identificacion)
+    public function destroy(Request $request)
     {
-        $validator = Validator::make(["numero_identificacion"=>$numero_identificacion], [
+        $validator = Validator::make($request->all(), [
             "numero_identificacion" => "required|exists:usuarios,numero_identificacion|min:6"
         ]);
 
@@ -109,7 +109,7 @@ class UserController extends Controller
             return ResponseHelper::error(422,$validator->errors()->first(),$validator->errors());
         }
 
-        $usuario = User::findOrFail($numero_identificacion);
+        $usuario = User::findOrFail($request->numero_identificacion);
 
         if(!$usuario){
             return ResponseHelper::error(404,"El usuario no existe",[]);   
