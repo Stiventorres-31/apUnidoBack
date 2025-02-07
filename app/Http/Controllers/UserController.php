@@ -13,7 +13,7 @@ class UserController extends Controller
 {
     public function index()
     {
-        $user = User::all();
+        $user = User::where("estado","=","A")->get();
 
         return ResponseHelper::success(200,"Todos los usuario registrados",["usuarios" => $user]);
 

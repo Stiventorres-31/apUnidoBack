@@ -42,11 +42,11 @@ class ProyectoController extends Controller
                 'proyectos.numero_identificacion',
                 'proyectos.estado'
             )
-            ->get();
+            ->where("estado","=","A")->get();
         return ResponseHelper::success(200, "Listado de proyectos", ["proyectos" => $proyectos]);
     }
 
-   
+
     public function store(Request $request)
     {
         $validateData = Validator::make($request->all(), [
@@ -87,10 +87,10 @@ class ProyectoController extends Controller
             return ResponseHelper::error(404, "Proyecto no encontrado");
         }
 
-       
+
         $proyectoArray = $proyecto->toArray();
 
-      
+
         foreach ($proyectoArray['inmuebles'] as &$inmueble) {
             $inmueble['total_presupuesto'] = collect($inmueble['presupuestos'])->sum('subtotal');
             // unset($inmueble['presupuestos']);
@@ -122,19 +122,16 @@ class ProyectoController extends Controller
             return ResponseHelper::error(404, "Proyecto no encontrado");
         }
 
-       
+
         $proyectoArray = $proyecto->toArray();
 
-      
+
         foreach ($proyectoArray['inmuebles'] as &$inmueble) {
             $inmueble['total_presupuesto'] = collect($inmueble['presupuestos'])->sum('subtotal');
             unset($inmueble['presupuestos']);
         }
 
         return ResponseHelper::success(200, "Proyecto obtenido", ["proyecto" => $proyectoArray]);
-
-
-
     }
 
     public function update(Request $request, $codigo_proyecto)
@@ -236,25 +233,23 @@ class ProyectoController extends Controller
     public function destroy(Request $request)
     {
         $validator = Validator::make($request->all(), [
-            "codigo_proyecto" => "required|exists:proyectos,codigo_proyecto|min:4"
+            "codigo_proyecto" => "required|exists:proyectos,codigo_proyecto|min:4",
+
         ]);
         if ($validator->fails()) {
-
-
             return ResponseHelper::error(422, $validator->errors()->first(), $validator->errors());
         }
+
         $proyecto = Proyecto::find($request->codigo_proyecto);
 
-        // if (!$proyecto) {
-        //     return response()->json([
-        //         'isError' => true,
-        //         'code' => 404,
-        //         'message' => 'Proyecto no encontrado',
-        //         'result' => [],
-        //     ], 404);
-        // }
+        $ValidarExistenciaPresupuesto = Presupuesto::where("codigo_proyecto", "=", $proyecto->codigo_proyecto)->exists();
+
+        if (!$ValidarExistenciaPresupuesto) {
+            return ResponseHelper::error(403, "Este proyecto no se puede eliminar porque tiene inmuebles con presupuesto");
+        }
+
         if ($proyecto->estado === 'F') {
-            return ResponseHelper::error(403, "Este proyecto no se puede eliminar");
+            return ResponseHelper::error(403, "Este proyecto no se puede eliminar porque ya esta finalizado");
         }
 
         $proyecto->update(["estado" => "E"]);

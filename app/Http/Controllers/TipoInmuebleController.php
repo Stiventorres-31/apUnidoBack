@@ -12,14 +12,14 @@ class TipoInmuebleController extends Controller
 {
     public function index()
     {
-        $tiposInmuebles = TipoInmueble::all();
+        $tiposInmuebles = TipoInmueble::where("estado","=","A")->get();
         return ResponseHelper::success(200,"Todos los tipos de inmuebles registrados",["tipo_inmueble" => $tiposInmuebles]);
     }
 
-    public function indexActivated(){
-        $tiposInmuebles = TipoInmueble::where("estado","=","A")->get();
-        return ResponseHelper::success(200,"Todos los tipos de inmuebles activos",["tipo_inmueble" => $tiposInmuebles]);
-    }
+    // public function indexActivated(){
+    //     $tiposInmuebles = TipoInmueble::where("estado","=","A")->get();
+    //     return ResponseHelper::success(200,"Todos los tipos de inmuebles activos",["tipo_inmueble" => $tiposInmuebles]);
+    // }
 
     public function store(Request $request)
     {
@@ -77,7 +77,7 @@ class TipoInmuebleController extends Controller
 
         $tipoInmueble->update([
             'nombre_tipo_inmueble' => $request->nombre_tipo_inmueble,
-            // 'numero_identificacion' => auth::user()->numero_identificacion
+           
 
         ]);
 
@@ -100,7 +100,8 @@ class TipoInmuebleController extends Controller
 
         $tipo_inmueble = TipoInmueble::find($id);
 
-        $tipo_inmueble->estado = ($tipo_inmueble->estado === "E") ? "A": "E";
+       // $tipo_inmueble->estado = ($tipo_inmueble->estado === "E") ? "A": "E";
+        $tipo_inmueble->estado = "E";
         $tipo_inmueble->save();
       
 

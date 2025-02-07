@@ -16,7 +16,7 @@ class MaterialeController extends Controller
 
     public function index()
     {
-        $materiale = Materiale::all();
+        $materiale = Materiale::where("estado","=","A")->get();
 
 
         return ResponseHelper::success(200,"Todos los materiales registrados",["materiale"=>$materiale]);

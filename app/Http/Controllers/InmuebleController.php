@@ -16,7 +16,7 @@ class InmuebleController extends Controller
 {
     public function index()
     {
-        $inmueble = Inmueble::with("usuario")->get();
+        $inmueble = Inmueble::where("estado","=","A")->with("usuario")->get();
         return ResponseHelper::success(201, "Todos los inmuebles", ["inmueble" => $inmueble]);
     }
     public function show($id)
