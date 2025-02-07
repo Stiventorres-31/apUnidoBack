@@ -24,8 +24,8 @@ class Proyecto extends Model
     ];
 
     protected $casts = [
-        "fecha_inicio_proyecto" => "date:d/m/Y",
-        "fecha_final_proyecto" => "date:d/m/Y",
+        // "fecha_inicio_proyecto" => "date:d/m/Y",
+        // "fecha_final_proyecto" => "date:d/m/Y",
         "estado" => "string"
     ];
     

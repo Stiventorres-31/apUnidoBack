@@ -133,8 +133,8 @@ class ProyectoController extends Controller
             'ciudad_municipio_proyecto' => 'sometimes|min:6',
             'direccion_proyecto' => 'sometimes|min:6',
 
-            'fecha_inicio_proyecto' => 'sometimes|date_format:Y-m-d',
-            'fecha_final_proyecto' => 'sometimes|date_format:Y-m-d|after:fecha_inicio_proyecto',
+            "fecha_inicio_proyecto" => "required|date_format:Y-m-d",
+            "fecha_final_proyecto" => "required|date_format:Y-m-d|after:fecha_inicio_proyecto"
 
         ]);
 

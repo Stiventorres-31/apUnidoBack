@@ -16,6 +16,11 @@ class TipoInmuebleController extends Controller
         return ResponseHelper::success(200,"Todos los tipos de inmuebles registrados",["tipo_inmueble" => $tiposInmuebles]);
     }
 
+    public function indexActivated(){
+        $tiposInmuebles = TipoInmueble::where("estado","=","A")->get();
+        return ResponseHelper::success(200,"Todos los tipos de inmuebles activos",["tipo_inmueble" => $tiposInmuebles]);
+    }
+
     public function store(Request $request)
     {
 
