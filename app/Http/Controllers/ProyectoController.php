@@ -42,7 +42,7 @@ class ProyectoController extends Controller
                 'proyectos.numero_identificacion',
                 'proyectos.estado'
             )
-            ->where("estado","=","A")->paginate(10);
+            ->where("estado","=","A")->paginate(2);
         return ResponseHelper::success(200, "Listado de proyectos", ["proyectos" => $proyectos]);
     }
 
