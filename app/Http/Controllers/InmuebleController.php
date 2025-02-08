@@ -16,12 +16,12 @@ class InmuebleController extends Controller
 {
     public function index()
     {
-        $inmueble = Inmueble::where("estado", "=", "A")->with("usuario")->get();
+        $inmueble = Inmueble::where("estado", "=", "A")->with("usuario", "tipo_inmueble")->get();
         return ResponseHelper::success(201, "Todos los inmuebles", ["inmueble" => $inmueble]);
     }
     public function show($id)
     {
-        $validator = Validator::make(["id"=> $id], [
+        $validator = Validator::make(["id" => $id], [
             "id" => "required|exists:inmuebles,id",
         ]);
 
