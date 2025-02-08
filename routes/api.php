@@ -46,6 +46,7 @@ Route::middleware('auth:api')->prefix('materiale')->group(function(){
 
 Route::middleware('auth:api')->prefix("proyecto")->group(function(){
     Route::get("/", [ProyectoController::class,'index']);
+    Route::get("/select", [ProyectoController::class,'select']);
     Route::get("/{codigo_proyecto}", [ProyectoController::class,'show']);
     Route::get("/presupuesto/{codigo_proyecto}", [ProyectoController::class,'showWithPresupuesto']);
     Route::post("/", [ProyectoController::class,'store']);

@@ -46,6 +46,10 @@ class ProyectoController extends Controller
         return ResponseHelper::success(200, "Listado de proyectos", ["proyectos" => $proyectos]);
     }
 
+    public function select(){
+        $proyecto = Proyecto::select("id","codigo_proyecto")->where("estado","A")->first();
+        return ResponseHelper::success(200,"Proyectos",$proyecto );
+    }
 
     public function store(Request $request)
     {
