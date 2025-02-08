@@ -15,9 +15,7 @@ return new class extends Migration
             $table->id();
             $table->string("referencia_material", 10)->unique();
             $table->string("nombre_material", 255);
-            
             $table->char("estado",1)->default("A");
-
             $table->unique(["referencia_material","nombre_material"]);
             $table->string("numero_identificacion", 20);
             $table->foreign("numero_identificacion")->references("numero_identificacion")->on("usuarios");

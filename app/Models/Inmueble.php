@@ -35,10 +35,10 @@ class Inmueble extends Model
         return $this->belongsTo(User::class,"numero_identificacion","numero_identificacion");
     }
     public function presupuestos(){
-        return $this->hasMany(Presupuesto::class,"nombre_inmueble","nombre_inmueble");
+        return $this->hasMany(Presupuesto::class,"inmueble_id","id");
     }
     public function asignaciones(){
-        return $this->hasMany(Asignacione::class,"nombre_inmueble","nombre_inmueble");
+        return $this->hasMany(Asignacione::class,"inmueble_id","id");
     }
     // public function toArray()
     // {

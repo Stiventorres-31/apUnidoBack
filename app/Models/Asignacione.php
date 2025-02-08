@@ -12,14 +12,15 @@ class Asignacione extends Model
 
     protected $table = 'asignaciones';
 
-    protected $primaryKey = ['numero_identificacion', 'id_inmueble'];
+    protected $primaryKey = ['numero_identificacion', 'codigo_inmueble',"referencia_material","consecutivo"];
     public $incrementing = false;
     public $timestamps = true;
 
     protected $fillable = [
         'numero_identificacion',
         'referencia_material',
-        'nombre_inmueble',
+        'codigo_inmueble',
+        "consecutivo",
         'codigo_proyecto',
         'cantidad_material',
         'costo_material',
@@ -44,7 +45,7 @@ class Asignacione extends Model
 
     public function inmueble()
     {
-        return $this->belongsTo(Inmueble::class, 'nombre_inmueble', 'nombre_inmueble');
+        return $this->belongsTo(Inmueble::class, 'codigo_inmueble', 'codigo_inmueble');
     }
 
     public function proyecto()

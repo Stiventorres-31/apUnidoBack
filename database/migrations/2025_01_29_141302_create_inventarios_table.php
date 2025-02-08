@@ -22,7 +22,7 @@ return new class extends Migration
             $table->string("cantidad");
             $table->string("nit_proveedor");
             $table->string("nombre_proveedor");
-            $table->string("descripcion_proveedor");
+            $table->string("descripcion_proveedor")->nullable();
             $table->char("estado",1)->default("A");
             $table->string("numero_identificacion", 20);
             

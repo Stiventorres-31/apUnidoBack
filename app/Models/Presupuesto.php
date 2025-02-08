@@ -12,17 +12,16 @@ class Presupuesto extends Model
 
     public $incrementing = false;  // La clave primaria es compuesta
 
-    protected $primaryKey = ['nombre_inmueble', 'codigo_proyecto'];
-
+    // protected $primaryKey = ["codigo_inmueble", "codigo_proyecto","referencia_material"];
+    protected $primaryKey = null;
     protected $fillable = [
-        'nombre_inmueble',
+        'inmueble_id',
         'referencia_material',
         'costo_material',
         'cantidad_material',
         'codigo_proyecto',
         'numero_identificacion',
-        'subtotal',
-        'consecutivo'
+        'subtotal'
 
     ];
 
@@ -41,7 +40,7 @@ class Presupuesto extends Model
     // Relación con Inmueble
     public function inmueble(): BelongsTo
     {
-        return $this->belongsTo(Inmueble::class, 'nombre_inmueble', 'nombre_inmueble');
+        return $this->belongsTo(Inmueble::class, 'inmueble_id', 'id');
     }
 
     // Relación con Material
@@ -55,12 +54,12 @@ class Presupuesto extends Model
     {
         return $this->belongsTo(Proyecto::class, 'codigo_proyecto', 'codigo_proyecto');
     }
-    public function totalPresupuesto()
-    {
-        return Attribute::make(
-            get: fn() => $this->subtotal * $this->cantidad_material
-        );
-    }
+    // public function totalPresupuesto()
+    // {
+    //     return Attribute::make(
+    //         get: fn() => $this->subtotal * $this->cantidad_material
+    //     );
+    // }
     // public function toArray()
     // {
     //     return [

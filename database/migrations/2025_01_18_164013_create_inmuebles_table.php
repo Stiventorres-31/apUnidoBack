@@ -14,7 +14,6 @@ return new class extends Migration
         Schema::create('inmuebles', function (Blueprint $table) {
          
             $table->id();
-            $table->string("nombre_inmueble")->unique();
             $table->string("estado",1)->default("A");
             $table->string("codigo_proyecto", 10);
             $table->string("numero_identificacion", 20);

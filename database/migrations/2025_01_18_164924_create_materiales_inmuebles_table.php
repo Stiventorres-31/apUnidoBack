@@ -13,7 +13,7 @@ return new class extends Migration
     {
         Schema::create('presupuestos', function (Blueprint $table) {
            
-            $table->string("nombre_inmueble");
+            $table->unsignedBigInteger("inmueble_id");
             $table->string("referencia_material",10);
             $table->string("numero_identificacion",20);
             
@@ -22,12 +22,12 @@ return new class extends Migration
             $table->float("cantidad_material");
             $table->string("codigo_proyecto");
 
-            $table->unsignedBigInteger("consecutivo",false);
+            // $table->unsignedBigInteger("consecutivo",false);
             // $table->char("estado",1)->default("A");
 
-            $table->primary(["nombre_inmueble","codigo_proyecto"]);
+            $table->primary(["inmueble_id","codigo_proyecto","referencia_material"]);
 
-            $table->foreign("nombre_inmueble")->references("nombre_inmueble")->on("inmuebles");
+            $table->foreign("inmueble_id")->references("id")->on("inmuebles");
             $table->foreign("referencia_material")->references("referencia_material")->on("materiales");
             $table->foreign("codigo_proyecto")->references("codigo_proyecto")->on("proyectos");
             $table->foreign("numero_identificacion")->references("numero_identificacion")->on(table: "usuarios");
