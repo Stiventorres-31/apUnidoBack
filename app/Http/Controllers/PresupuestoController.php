@@ -12,64 +12,17 @@ use App\Models\TipoInmueble;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 use League\Csv\Reader;
 
 class PresupuestoController extends Controller
 {
-    // public function store(Request $request)
-    // {
-    //     $validatedData = Validator::make($request->all(), [
-    //         'nombre_inmueble'         => 'required|exists:inmuebles,nombre_inmueble',
-    //         'referencia_material' => 'required|exists:materiales,referencia_material',
-    //         'costo_material'      => 'required|numeric|min:1',
-    //         'cantidad_material'   => 'required|numeric|min:1',
-    //         'codigo_proyecto'     => 'required|exists:proyectos,codigo_proyecto',
-
-    //     ]);
-
-    //     if ($validatedData->fails()) {
-    //         return response()->json([
-    //             'isError' => true,
-    //             'code' => 422,
-    //             'message' => 'Verificar la información',
-    //             'result' => $validatedData->errors(),
-    //         ], 422);
-    //     }
-
-    //     // $presupuesto = Presupuesto::create($validatedData);
-
-    //     $requestData = $request->all();
-
-
-    //     $presupuesto = new Presupuesto();
-
-    //     $dataMaterial = Materiale::where('referencia_material', "=", $request->referencia_material)->first();
-
-
-
-    //     $presupuesto->nombre_inmueble = $request->nombre_inmueble;
-    //     $presupuesto->referencia_material = $dataMaterial->referencia_material;
-    //     $presupuesto->costo_material = $dataMaterial->costo;
-    //     $presupuesto->cantidad_material = $request->cantidad;
-    //     $presupuesto->codigo_proyecto = strtoupper($request->codigo_proyecto);
-
-    //     $presupuesto->save();
-
-    //     return response()->json([
-    //         'isError' => false,
-    //         'code' => 201,
-    //         'message' => 'Presupuesto creado exitosamente',
-    //         'result' => ['presupuesto' => $presupuesto]
-    //     ], 201);
-    // }
     public function store(Request $request)
     {
 
 
         $validatedData = Validator::make($request->all(), [
-            'nombre_inmueble' => 'required|exists:inmuebles,nombre_inmueble',
+            'inmueble_id' => 'required|exists:inmuebles,id',
             'codigo_proyecto' => 'required|exists:proyectos,codigo_proyecto',
             'materiales' => "required|array",
 
@@ -86,7 +39,7 @@ class PresupuestoController extends Controller
             $validatedData = Validator::make($material, [
                 'referencia_material' => 'required|exists:materiales,referencia_material',
                 'costo_material'      => 'required|numeric|min:1',
-                'consecutivo' => "required|numeric|exists:inventarios,consecutivo",
+                "consecutivo" => "required",
                 'cantidad_material'   => 'required|numeric|min:1',
             ]);
 
@@ -96,20 +49,15 @@ class PresupuestoController extends Controller
             }
 
             $exisitencia = Presupuesto::where('referencia_material', $material["referencia_material"])
-                ->where("consecutivo", "=", $material["consecutivo"])
+
                 ->where("codigo_proyecto", "=", $request->codigo_proyecto)
-                ->where("nombre_inmueble", "=", $request->nombre_inmueble)
+                ->where("inmueble_id", "=", $request->inmueble_id)
                 ->first();
 
-            // return response()->json([
-            //     'isError' => true,
-            //     'code' => 400,
-            //     'message' => "Ya existe este material ". $material["referencia_material"] . " con lote ". $material["consecutivo"] ." en el presupuesto",
-            //     'result' => $material,
-            // ], 400);
 
             if ($exisitencia) {
-                return ResponseHelper::error(400, "Ya existe este material " . $material["referencia_material"] . " con lote " . $material["consecutivo"] . " en el presupuesto");
+                return ResponseHelper::error(400, "Ya existe este material "
+                    . $material["referencia_material"]);
             }
 
             $dataMaterial = Materiale::where(
@@ -129,10 +77,9 @@ class PresupuestoController extends Controller
 
 
             $templatePresupuesto[] = [
-                "nombre_inmueble" => strtoupper($request->nombre_inmueble),
+                "inmueble_id" => strtoupper($request->inmueble_id),
                 "codigo_proyecto" => strtoupper($request->codigo_proyecto),
                 "referencia_material" => $dataMaterial->referencia_material,
-                "consecutivo" => $inventario->consecutivo,
                 "costo_material" => $inventario->costo,
                 "cantidad_material" => $material["cantidad_material"],
                 "subtotal" => floatval($inventario->costo * $material["cantidad_material"]),
@@ -149,14 +96,64 @@ class PresupuestoController extends Controller
         return ResponseHelper::success(201, "Se ha creado con exito");
     }
 
+    public function show(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            "codigo_proyecto" => "required|exists:presupuestos,codigo_proyecto",
+            "inmueble_id" => "required|exists:presupuestos,inmueble_id",
+            "referencia_material" => "required|exists:presupuestos,referencia_material"
+        ]);
+
+        if ($validator->fails()) {
+            return ResponseHelper::error(422, $validator->errors()->first(), $validator->errors());
+        }
+
+        $presupuesto = Presupuesto::where("codigo_proyecto", $request->codigo_proyecto)
+            ->where("inmueble_id", $request->inmueble_id)
+            ->where("referencia_material", $request->referencia_material)
+            ->first();
+
+
+
+        return ResponseHelper::success(200, "Se ha obtenido con exito", ["presupuesto" => $presupuesto]);
+    }
+
+    public function update(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            "codigo_proyecto" => "required|exists:proyectos,codigo_proyecto",
+            "inmueble_id" => "required|exists:inmuebles,id",
+            "referencia_material" => "required|exists:materiales,referencia_material",
+            "cantidad_material" => "required|numeric"
+        ]);
+
+        if ($validator->fails()) {
+            return ResponseHelper::error(422, $validator->errors()->first(), $validator->errors());
+        }
+
+        $presupuesto = Presupuesto::where("codigo_proyecto", $request->codigo_proyecto)
+            ->where("inmueble_id", $request->inmueble_id)
+            ->where("referencia_material", $request->referencia_material)
+            ->first();
+
+        if (!$presupuesto) {
+            return ResponseHelper::error(404, "El presupuesto con los datos proporcionados no existe.");
+        }
+        $presupuesto->cantidad_material = $request->cantidad_material;
+        $presupuesto->subtotal = $presupuesto->costo_material * $request->cantidad_material;
+        $presupuesto->save();
+
+        return ResponseHelper::success(200, "Se ha actualizado con exito");
+    }
+
     public function destroy(Request $request)
     {
 
 
         $validatedData = Validator::make($request->all(), [
-            'nombre_inmueble'         => 'required|integer|exists:presupuestos,nombre_inmueble',
-            'referencia_material' => 'required|string|exists:presupuestos,referencia_material',
-            'codigo_proyecto'     => 'required|string|exists:presupuestos,codigo_proyecto',
+            'inmueble_id'         => 'required|integer|exists:inmuebles,id',
+            'referencia_material' => 'required|string|exists:materiales,referencia_material',
+            'codigo_proyecto'     => 'required|string|exists:proyectos,codigo_proyecto',
         ]);
 
         if ($validatedData->fails()) {
@@ -164,9 +161,9 @@ class PresupuestoController extends Controller
         }
 
         $presupuesto = Presupuesto::where([
-            'nombre_inmueble' => $request->nombre_inmueble,
+            'inmueble_id' => $request->inmueble_id,
             'referencia_material' => $request->referencia_material,
-            'codigo_proyecto' => $request->codigo_proyecto,
+            'codigo_proyecto' => $request->codigo_proyecto
         ])->delete();
 
         if (!$presupuesto) {
@@ -193,7 +190,7 @@ class PresupuestoController extends Controller
 
 
         $cabecera = [
-            "nombre_inmueble",
+            "codigo_inmueble",
             "tipo_inmueble",
             "referencia_material",
             "consecutivo",
@@ -224,7 +221,7 @@ class PresupuestoController extends Controller
 
         foreach ($archivoCSV->getRecords() as $valueCSV) {
             $validatorDataCSV = Validator::make($valueCSV, [
-                "nombre_inmueble" => "required",
+                "codigo_inmueble" => "required",
                 "tipo_inmueble" => "required",
                 "referencia_material" => [
                     "required",
@@ -262,13 +259,13 @@ class PresupuestoController extends Controller
                 return ResponseHelper::error(404, "El tipo de inmueble '{$tipo_inmueble}' no existe");
             }
 
-            $inmueble = Inmueble::where("nombre_inmueble", trim(strtoupper($valueCSV["nombre_inmueble"])))
+            $inmueble = Inmueble::where("codigo_inmueble", trim(strtoupper($valueCSV["codigo_inmueble"])))
                 ->where("estado", "A")
                 ->first();
 
             if (!$inmueble) {
                 // $datosInmuebles = [
-                //     "nombre_inmueble" => trim(strtoupper($valueCSV["nombre_inmueble"])),
+                //     "codigo_inmueble" => trim(strtoupper($valueCSV["codigo_inmueble"])),
                 //     "codigo_proyecto" => trim(strtoupper($valueCSV["codigo_proyecto"])),
                 //     "tipo_inmueble" => $tipo_inmueble->id,
                 //     "numero_identificacion" => Auth::user()->numero_identificacion,
@@ -277,7 +274,7 @@ class PresupuestoController extends Controller
                 // ];
 
                 $inmueble = new Inmueble();
-                $inmueble->nombre_inmueble = trim(strtoupper($valueCSV["nombre_inmueble"]));
+                $inmueble->codigo_inmueble = trim(strtoupper($valueCSV["codigo_inmueble"]));
                 $inmueble->codigo_proyecto = trim(strtoupper($valueCSV["codigo_proyecto"]));
                 $inmueble->tipo_inmueble = $tipo_inmueble->id;
 
@@ -296,21 +293,21 @@ class PresupuestoController extends Controller
 
             $datosPresupuestos[] = [
 
-                "nombre_inmueble" => trim(strtoupper($valueCSV["nombre_inmueble"])),
+                "codigo_inmueble" => trim(strtoupper($valueCSV["codigo_inmueble"])),
                 "referencia_material" => trim(strtoupper($valueCSV["referencia_material"])),
                 "costo_material" => $inventarioMaterial->costo,
                 "consecutivo" => $inventarioMaterial->consecutivo,
                 "cantidad_material" => $valueCSV["cantidad_material"],
-                "subtotal"=>($inventarioMaterial->costo*$valueCSV["cantidad_material"]),
+                "subtotal" => ($inventarioMaterial->costo * $valueCSV["cantidad_material"]),
                 "codigo_proyecto" => strtoupper($valueCSV["codigo_proyecto"]),
                 "numero_identificacion" => auth::user()->numero_identificacion,
-                "created_at"=>Carbon::now(),
-                "updated_at"=>Carbon::now()
+                "created_at" => Carbon::now(),
+                "updated_at" => Carbon::now()
             ];
         }
 
         Presupuesto::insert($datosPresupuestos);
-        
+
 
         return ResponseHelper::success(200, "Se ha cargado correctamente", $datosPresupuestos);
     }

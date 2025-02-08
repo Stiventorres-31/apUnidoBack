@@ -75,6 +75,8 @@ Route::middleware('auth:api')->prefix('inmueble')->group(function(){
 Route::middleware('auth:api')->prefix('presupuesto')->group(function(){
     Route::post("/",[PresupuestoController::class,"store"]);
     Route::post("/file",[PresupuestoController::class,"fileMasivo"]);
+    Route::get("/",[PresupuestoController::class,"show"]);
+    Route::put("/",[PresupuestoController::class,"update"]);
     // Route::delete("/{id}",[PresupuestoController::class,"destroy"]);
     // Route::get("/",[PresupuestoController::class,"index"]);
     // Route::get("/{id}",[PresupuestoController::class,"show"]);

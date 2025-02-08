@@ -59,7 +59,7 @@ class MaterialeController extends Controller
             "cantidad" => "required|numeric|min:0",
             "nit_proveedor" => "required|min:6",
             "nombre_proveedor" => "required|min:6",
-            "descripcion_proveedor" => "required|min:6",
+            "descripcion_proveedor" => "nullable|min:6",
         ]);
 
 

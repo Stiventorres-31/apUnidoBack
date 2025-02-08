@@ -16,7 +16,7 @@ class InmuebleController extends Controller
 {
     public function index()
     {
-        $inmueble = Inmueble::where("estado","=","A")->with("usuario")->get();
+        $inmueble = Inmueble::where("estado", "=", "A")->with("usuario")->get();
         return ResponseHelper::success(201, "Todos los inmuebles", ["inmueble" => $inmueble]);
     }
     public function show($id)
@@ -54,10 +54,10 @@ class InmuebleController extends Controller
         $archivoCSV->setDelimiter(";");
         $archivoCSV->setOutputBOM(Writer::BOM_UTF8);
         $archivoCSV->insertOne([
-            "Código del proyecto",
-            "Nombre de inmueble",
-            "Referencia del material",
-            "Nombre del material",
+            "codigo_proyecto",
+            "inmueble_id",
+            "referencia_material",
+            "mombre_material",
             "costo del material",
             "Cantidad del material"
         ]);
@@ -65,7 +65,7 @@ class InmuebleController extends Controller
         foreach ($inmueble->presupuestos as $presupuesto) {
             $archivoCSV->insertOne([
                 $presupuesto["codigo_proyecto"],
-                $presupuesto["nombre_inmueble"],
+                $presupuesto["inmueble_id"],
                 $presupuesto["referencia_material"],
                 $presupuesto["material"]["nombre_material"],
                 $presupuesto["costo_material"],
@@ -89,7 +89,7 @@ class InmuebleController extends Controller
         $validateData = Validator::make($request->all(), [
             "tipo_inmueble" => "required|exists:tipo_inmuebles,id",
             "codigo_proyecto" => "required|exists:proyectos,codigo_proyecto",
-            "nombre_inmueble" => "required|unique:inmuebles,nombre_inmueble|max:255"
+            "cantidad_inmueble" => "required|numeric"
         ]);
 
 
@@ -97,15 +97,14 @@ class InmuebleController extends Controller
             return ResponseHelper::error(422, $validateData->errors()->first(), $validateData->errors());
         }
 
-        $inmueble = new Inmueble();
-
-        $inmueble->nombre_inmueble = strtoupper($request->nombre_inmueble);
-        $inmueble->tipo_inmueble = strtoupper($request->tipo_inmueble);
-        $inmueble->codigo_proyecto = strtoupper($request->codigo_proyecto);
-        $inmueble->numero_identificacion = Auth::user()->numero_identificacion;
-        $inmueble->save();
-
-        return ResponseHelper::success(201, "Tipo de inmueble creado con éxito", ["inmueble" => $inmueble]);
+        for ($i = 0; $i < $request->cantidad_inmueble; $i++) {
+            $inmueble = new Inmueble();
+            $inmueble->tipo_inmueble = strtoupper($request->tipo_inmueble);
+            $inmueble->codigo_proyecto = strtoupper($request->codigo_proyecto);
+            $inmueble->numero_identificacion = Auth::user()->numero_identificacion;
+            $inmueble->save();
+        }
+        return ResponseHelper::success(201, "Inmueble creado con éxito");
     }
 
     public function destroy(Request $request)
@@ -115,30 +114,30 @@ class InmuebleController extends Controller
         ]);
 
         if ($validator->fails()) {
-            return ResponseHelper::error(422,$validator->errors()->first(),$validator->errors());
+            return ResponseHelper::error(422, $validator->errors()->first(), $validator->errors());
         }
 
         $inmueble = Inmueble::find($request->id);
 
-        $existePresupuesto = Presupuesto::where('nombre_inmueble', '=', $inmueble->nombre_inmueble)->exists();
-        $existeAsignacion = Asignacione::where('nombre_inmueble', '=', $inmueble->nombre_inmueble)->exists();
+        $existePresupuesto = Presupuesto::where('inmueble_id', '=', $inmueble->inmueble_id)->exists();
+        $existeAsignacion = Asignacione::where('inmueble_id', '=', $inmueble->inmueble_id)->exists();
 
         if ($inmueble->estado === "F" || $existePresupuesto || $existeAsignacion) {
-          
 
-            return ResponseHelper::error(400,"No se puede eliminar este inmueble. Verifica si el inmueble ya fue finalizado o tenga un presupuesto activo");
+
+            return ResponseHelper::error(400, "No se puede eliminar este inmueble. Verifica si el inmueble ya fue finalizado o tenga un presupuesto activo");
         }
 
         $inmueble->estado = "E";
 
-        return ResponseHelper::success(200,"Se ha eliminado con exito");
+        return ResponseHelper::success(200, "Se ha eliminado con exito");
     }
 
     // public function update(Request $request, $id){
     //     $validateData = Validator::make($request->all(), [
     //         "tipo_inmueble" => "required|exists:tipo_inmuebles,id",
 
-    //         "nombre_inmueble" => "required|unique:inmuebles,nombre_inmueble|max:255",
+    //         "inmueble_id" => "required|unique:inmuebles,inmueble_id|max:255",
     //         'numero_identificacion' => 'required|string|exists:usuarios,numero_identificacion|max:20',
     //     ]);
 
