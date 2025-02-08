@@ -42,7 +42,7 @@ class ProyectoController extends Controller
                 'proyectos.numero_identificacion',
                 'proyectos.estado'
             )
-            ->where("estado","=","A")->get();
+            ->where("estado","=","A")->paginate(10);
         return ResponseHelper::success(200, "Listado de proyectos", ["proyectos" => $proyectos]);
     }
 
@@ -245,11 +245,11 @@ class ProyectoController extends Controller
         $ValidarExistenciaPresupuesto = Presupuesto::where("codigo_proyecto", "=", $proyecto->codigo_proyecto)->exists();
 
         if ($ValidarExistenciaPresupuesto) {
-            return ResponseHelper::error(403, "Este proyecto no se puede eliminar porque tiene inmuebles con presupuesto");
+            return ResponseHelper::error(401, "Este proyecto no se puede eliminar porque tiene inmuebles con presupuesto");
         }
 
         if ($proyecto->estado === 'F') {
-            return ResponseHelper::error(403, "Este proyecto no se puede eliminar porque ya esta finalizado");
+            return ResponseHelper::error(401, "Este proyecto no se puede eliminar porque ya esta finalizado");
         }
 
         $proyecto->update(["estado" => "E"]);
