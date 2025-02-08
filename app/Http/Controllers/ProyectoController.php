@@ -47,7 +47,7 @@ class ProyectoController extends Controller
     }
 
     public function select(){
-        $proyecto = Proyecto::select("id","codigo_proyecto")->where("estado","A")->first();
+        $proyecto = Proyecto::select("id","codigo_proyecto")->where("estado","A")->all();
         return ResponseHelper::success(200,"Proyectos",$proyecto );
     }
 
