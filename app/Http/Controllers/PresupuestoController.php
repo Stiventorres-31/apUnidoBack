@@ -38,7 +38,7 @@ class PresupuestoController extends Controller
         foreach ($request->materiales as $material) {
             $validatedData = Validator::make($material, [
                 'referencia_material' => 'required|exists:materiales,referencia_material',
-                'costo_material'      => 'required|numeric|min:1',
+                'costo_material'      => 'required|',
                 "consecutivo" => "required",
                 'cantidad_material'   => 'required|numeric|min:1',
             ]);
@@ -50,8 +50,8 @@ class PresupuestoController extends Controller
 
             $exisitencia = Presupuesto::where('referencia_material', $material["referencia_material"])
 
-                ->where("codigo_proyecto", "=", $request->codigo_proyecto)
-                ->where("inmueble_id", "=", $request->inmueble_id)
+                ->where("codigo_proyecto",  $request->codigo_proyecto)
+                ->where("inmueble_id", $request->inmueble_id)
                 ->first();
 
 
@@ -61,21 +61,24 @@ class PresupuestoController extends Controller
             }
 
             $dataMaterial = Materiale::where(
-                'referencia_material',
-                "=",
+                'referencia_material', 
                 strtoupper($material["referencia_material"])
             )
                 ->first();
 
             if ($dataMaterial->estado !== "A" || !$dataMaterial) {
 
-                return ResponseHelper::error(404, "Este material no existe con código = > " . $material->referencia_material);
+                return ResponseHelper::error(404, "Este material no existe con código => " . $material["referencia_material"]);
             }
+            
 
-            $inventario = Inventario::where("referencia_material", "=", $dataMaterial->referencia_material)
-                ->where("consecutivo", "=", $material["consecutivo"])->first();
+            $inventario = Inventario::where("referencia_material",  $dataMaterial->referencia_material)
+                ->where("consecutivo", $material["consecutivo"])->first();
+                if (!$inventario) {
 
-
+                    return ResponseHelper::error(404, "El lote {$material["consecutivo"]} de este material {$material["referencia_material"]} no existe");
+                }
+                
             $templatePresupuesto[] = [
                 "inmueble_id" => strtoupper($request->inmueble_id),
                 "codigo_proyecto" => strtoupper($request->codigo_proyecto),

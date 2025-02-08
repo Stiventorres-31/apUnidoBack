@@ -21,7 +21,7 @@ class InmuebleController extends Controller
     }
     public function show($id)
     {
-        $validator = Validator::make(["id", $id], [
+        $validator = Validator::make(["id"=> $id], [
             "id" => "required|exists:inmuebles,id",
         ]);
 
