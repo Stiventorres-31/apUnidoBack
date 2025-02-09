@@ -57,7 +57,7 @@ class UserController extends Controller
         $usuario = new User();
         $usuario->numero_identificacion = $request->numero_identificacion;
         $usuario->nombre_completo = strtoupper($request->nombre_completo);
-        $usuario->password = bcrypt($request->password);
+        $usuario->password = hash::make($request->password);
         $usuario->rol_usuario = strtoupper($request->rol_usuario["name"]);
         $usuario->estado = 'A';
 
@@ -71,7 +71,6 @@ class UserController extends Controller
     {
         $validateData = Validator::make($request->all(), [
             'nombre_completo' => 'required|max:50',
-            'password' => 'required|min:6',
             'rol_usuario' => 'required|array',
             "rol_usuario.id" => "required|min:1",
             "rol_usuario.name" => "required|max:20",
@@ -89,7 +88,6 @@ class UserController extends Controller
         }
 
         $usuario->nombre_completo = strtoupper($request->input("nombre_completo"));
-        $usuario->password = bcrypt($request->input("password"));
         $usuario->rol_usuario = strtoupper($request->input("rol_usuario")["name"]);
 
         $usuario->save();
@@ -109,7 +107,7 @@ class UserController extends Controller
             return ResponseHelper::error(422,$validator->errors()->first(),$validator->errors());
         }
 
-        $usuario = User::findOrFail($request->numero_identificacion);
+        $usuario = User::find($request->numero_identificacion);
 
         if(!$usuario){
             return ResponseHelper::error(404,"El usuario no existe",[]);   

@@ -1,7 +1,6 @@
 <?php
 
 use App\Http\Controllers\AsignacioneController;
-use App\Http\Controllers\AsingacioneController;
 use App\Http\Controllers\InmuebleController;
 use App\Http\Controllers\InventarioController;
 use App\Http\Controllers\LoginController;
