@@ -86,10 +86,10 @@ class TipoInmuebleController extends Controller
 
     }
 
-    public function destroy($id)
+    public function destroy(Request $request)
     {
 
-        $validator = Validator::make(['id' => $id], [
+        $validator = Validator::make($request->all(), [
             'id' => 'required|exists:tipo_inmuebles,id', // Verifica que exista el ID en la tabla tipo_inmuebles
         ]);
     
@@ -98,7 +98,7 @@ class TipoInmuebleController extends Controller
         }
 
 
-        $tipo_inmueble = TipoInmueble::find($id);
+        $tipo_inmueble = TipoInmueble::find($request->id);
 
        // $tipo_inmueble->estado = ($tipo_inmueble->estado === "E") ? "A": "E";
         $tipo_inmueble->estado = "E";
