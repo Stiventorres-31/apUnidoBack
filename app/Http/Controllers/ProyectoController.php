@@ -85,7 +85,7 @@ class ProyectoController extends Controller
     public function showWithPresupuesto($codigo_proyecto)
     {
 
-        $proyecto = Proyecto::with('inmuebles.presupuestos')->find($codigo_proyecto);
+        $proyecto = Proyecto::with(['inmuebles.presupuestos','inmuebles.tipo_inmueble'])->find($codigo_proyecto);
 
         if (!$proyecto) {
             return ResponseHelper::error(404, "Proyecto no encontrado");
@@ -140,6 +140,9 @@ class ProyectoController extends Controller
 
     public function update(Request $request, $codigo_proyecto)
     {
+        $validator = Validator::make($request->all(), [
+            "dep"
+        ]);
         $proyecto = Proyecto::find(strtoupper(trim($codigo_proyecto)));
 
         if (!$proyecto) {
