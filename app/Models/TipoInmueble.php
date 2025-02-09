@@ -30,16 +30,16 @@ class TipoInmueble extends Model
     public function inmuebles(){
         return $this->hasOne(Inmueble::class,"tipo_inmueble","id");
     }
-    public function toArray()
-    {
-        return [
-            'id' => $this->id,
-            'nombre_tipo_inmueble' => $this->nombre_tipo_inmueble,
-            'numero_identificacion' => $this->numero_identificacion,
-            'estado' => $this->estado,
-            'usuario' => $this->usuario ? $this->usuario->toArray() : null,
-        ];
+    // public function toArray()
+    // {
+    //     return [
+    //         'id' => $this->id,
+    //         'nombre_tipo_inmueble' => $this->nombre_tipo_inmueble,
+    //         'numero_identificacion' => $this->numero_identificacion,
+    //         'estado' => $this->estado,
+    //         'usuario' => $this->usuario ? $this->usuario->toArray() : null,
+    //     ];
 
         
-    }
+    // }
 }

@@ -12,7 +12,7 @@ class TipoInmuebleController extends Controller
 {
     public function index()
     {
-        $tiposInmuebles = TipoInmueble::where("estado","=","A")->get();
+        $tiposInmuebles = TipoInmueble::where("estado","A")->with("usuario")->get();
         return ResponseHelper::success(200,"Todos los tipos de inmuebles registrados",["tipo_inmueble" => $tiposInmuebles]);
     }
 
@@ -57,7 +57,7 @@ class TipoInmuebleController extends Controller
             return ResponseHelper::error(422,$validator->errors()->first(),$validator->errors());
         }
 
-        $tipoInmueble = TipoInmueble::find($id);
+        $tipoInmueble = TipoInmueble::with("usuario")->find($id);
         return ResponseHelper::success(200,"Tipo de inmueble encontrado",["tipo_inmueble" => $tipoInmueble]);
     }
     public function update(Request $request, $id)
