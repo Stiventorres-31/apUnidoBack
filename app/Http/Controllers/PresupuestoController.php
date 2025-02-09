@@ -61,7 +61,7 @@ class PresupuestoController extends Controller
             }
 
             $dataMaterial = Materiale::where(
-                'referencia_material', 
+                'referencia_material',
                 strtoupper($material["referencia_material"])
             )
                 ->first();
@@ -70,15 +70,15 @@ class PresupuestoController extends Controller
 
                 return ResponseHelper::error(404, "Este material no existe con código => " . $material["referencia_material"]);
             }
-            
+
 
             $inventario = Inventario::where("referencia_material",  $dataMaterial->referencia_material)
                 ->where("consecutivo", $material["consecutivo"])->first();
-                if (!$inventario) {
+            if (!$inventario) {
 
-                    return ResponseHelper::error(404, "El lote {$material["consecutivo"]} de este material {$material["referencia_material"]} no existe");
-                }
-                
+                return ResponseHelper::error(404, "El lote {$material["consecutivo"]} de este material {$material["referencia_material"]} no existe");
+            }
+
             $templatePresupuesto[] = [
                 "inmueble_id" => strtoupper($request->inmueble_id),
                 "codigo_proyecto" => strtoupper($request->codigo_proyecto),
@@ -196,7 +196,7 @@ class PresupuestoController extends Controller
             "codigo_inmueble",
             "tipo_inmueble",
             "referencia_material",
-            "consecutivo",
+            "costo_material",
             "cantidad_material",
             "codigo_proyecto"
         ];
@@ -226,6 +226,7 @@ class PresupuestoController extends Controller
             $validatorDataCSV = Validator::make($valueCSV, [
                 "codigo_inmueble" => "required",
                 "tipo_inmueble" => "required",
+                "costo_material" => "required",
                 "referencia_material" => [
                     "required",
                     function ($attribute, $value, $fail) {
@@ -258,11 +259,29 @@ class PresupuestoController extends Controller
             $tipo_inmueble = TipoInmueble::where("nombre_tipo_inmueble",  trim(strtoupper($valueCSV["tipo_inmueble"])))
                 ->where("estado", "A")
                 ->first();
+
             if (!$tipo_inmueble) {
                 return ResponseHelper::error(404, "El tipo de inmueble '{$tipo_inmueble}' no existe");
             }
 
-            $inmueble = Inmueble::where("codigo_inmueble", trim(strtoupper($valueCSV["codigo_inmueble"])))
+            // $inventarioMaterial = Inventario::where("referencia_material", trim(strtoupper($valueCSV["referencia_material"])))
+            //     ->where("consecutivo", (int) $valueCSV["consecutivo"])
+            //     ->where("estado", "A")
+            //     ->first();
+
+            // if (!$inventarioMaterial) {
+            //     return ResponseHelper::error(404, "El material '{$valueCSV["referencia_material"]}' con el lote '{$valueCSV["consecutivo"]}' no existe");
+            // }
+
+            $existencia_presupuesto = Presupuesto::where("inmueble_id", $valueCSV["codigo_inmueble"])
+            ->where("codigo_proyecto",$valueCSV["codigo_proyecto"])
+            ->where("referencia_material",$valueCSV["referencia_material"])->exists();
+
+            if($existencia_presupuesto){
+                return ResponseHelper::error(400,
+                "El presupuesto de este inmueble {$valueCSV['codigo_inmueble']} con el material {$valueCSV['referencia_material']} ya existe en el proyecto {$valueCSV['codigo_proyecto']}");
+            }
+            $inmueble = Inmueble::where("id", trim(strtoupper($valueCSV["codigo_inmueble"])))
                 ->where("estado", "A")
                 ->first();
 
@@ -277,7 +296,7 @@ class PresupuestoController extends Controller
                 // ];
 
                 $inmueble = new Inmueble();
-                $inmueble->codigo_inmueble = trim(strtoupper($valueCSV["codigo_inmueble"]));
+                // $inmueble->id = trim(strtoupper($valueCSV["codigo_inmueble"]));
                 $inmueble->codigo_proyecto = trim(strtoupper($valueCSV["codigo_proyecto"]));
                 $inmueble->tipo_inmueble = $tipo_inmueble->id;
 
@@ -285,23 +304,16 @@ class PresupuestoController extends Controller
                 $inmueble->save();
             }
 
-            $inventarioMaterial = Inventario::where("referencia_material", trim(strtoupper($valueCSV["referencia_material"])))
-                ->where("consecutivo", (int) $valueCSV["consecutivo"])
-                ->where("estado", "A")
-                ->first();
 
-            if (!$inventarioMaterial) {
-                return ResponseHelper::error(404, "El material '{$valueCSV["referencia_material"]}' con el lote '{$valueCSV["consecutivo"]}' no existe");
-            }
+
 
             $datosPresupuestos[] = [
 
-                "codigo_inmueble" => trim(strtoupper($valueCSV["codigo_inmueble"])),
+                "inmueble_id" => $inmueble->id,
                 "referencia_material" => trim(strtoupper($valueCSV["referencia_material"])),
-                "costo_material" => $inventarioMaterial->costo,
-                "consecutivo" => $inventarioMaterial->consecutivo,
+                "costo_material" => $valueCSV["costo_material"],
                 "cantidad_material" => $valueCSV["cantidad_material"],
-                "subtotal" => ($inventarioMaterial->costo * $valueCSV["cantidad_material"]),
+                "subtotal" => ($valueCSV["costo_material"] * $valueCSV["cantidad_material"]),
                 "codigo_proyecto" => strtoupper($valueCSV["codigo_proyecto"]),
                 "numero_identificacion" => auth::user()->numero_identificacion,
                 "created_at" => Carbon::now(),
