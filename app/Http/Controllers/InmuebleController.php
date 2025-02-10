@@ -129,7 +129,7 @@ class InmuebleController extends Controller
         }
 
         $inmueble->estado = "E";
-
+$inmueble->save();
         return ResponseHelper::success(200, "Se ha eliminado con exito");
     }
 
