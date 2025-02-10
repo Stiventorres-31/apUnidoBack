@@ -185,7 +185,8 @@ class PresupuestoController extends Controller
     public function fileMasivo(Request $request)
     {
         $validator = Validator::make($request->all(), [
-            'file' => 'required|file'
+            'file' => 'required|file',
+            "codigo_proyecto" =>"required"
         ]);
 
         if ($validator->fails()) {
@@ -195,11 +196,9 @@ class PresupuestoController extends Controller
 
         $cabecera = [
             "codigo_inmueble",
-            "tipo_inmueble",
             "referencia_material",
             "costo_material",
-            "cantidad_material",
-            "codigo_proyecto"
+            "cantidad_material"
         ];
 
         $file = $request->file('file');
@@ -212,9 +211,10 @@ class PresupuestoController extends Controller
 
         $archivoCabecera = $archivoCSV->getHeader();
 
+        // return $archivoCabecera;
 
         if ($archivoCabecera !== $cabecera) {
-            return ResponseHelper::error(400, "El archivo no tiene la estructura requerida");
+            return ResponseHelper::error(422, "El archivo no tiene la estructura requerida");
         }
 
 
@@ -227,7 +227,6 @@ class PresupuestoController extends Controller
         foreach ($archivoCSV->getRecords() as $valueCSV) {
             $validatorDataCSV = Validator::make($valueCSV, [
                 "codigo_inmueble" => "required",
-                "tipo_inmueble" => "required",
                 "costo_material" => "required",
                 "referencia_material" => [
                     "required",
@@ -241,17 +240,7 @@ class PresupuestoController extends Controller
                     }
                 ],
                 "cantidad_material" => "required",
-                "codigo_proyecto" => [
-                    "required",
-                    function ($attribute, $value, $fail) {
-                        $codigo_proyecto = strtoupper($value);
-                        if (!Proyecto::where("codigo_proyecto", $codigo_proyecto)
-                            ->where("estado", "A")
-                            ->exists()) {
-                            $fail("El código del proyecto no existe '{$codigo_proyecto}' no existe");
-                        }
-                    }
-                ]
+                
             ]);
 
             if ($validatorDataCSV->fails()) {
@@ -259,14 +248,14 @@ class PresupuestoController extends Controller
                 return ResponseHelper::error(422, $validatorDataCSV->errors()->first(), $validatorDataCSV->errors());
             }
 
-            $tipo_inmueble = TipoInmueble::where("nombre_tipo_inmueble",  trim(strtoupper($valueCSV["tipo_inmueble"])))
-                ->where("estado", "A")
-                ->first();
+            // $tipo_inmueble = TipoInmueble::where("nombre_tipo_inmueble",  trim(strtoupper($valueCSV["tipo_inmueble"])))
+            //     ->where("estado", "A")
+            //     ->first();
 
-            if (!$tipo_inmueble) {
-                DB::rollBack();
-                return ResponseHelper::error(404, "El tipo de inmueble '{$tipo_inmueble}' no existe");
-            }
+            // if (!$tipo_inmueble) {
+            //     DB::rollBack();
+            //     return ResponseHelper::error(404, "El tipo de inmueble '{$tipo_inmueble}' no existe");
+            // }
 
             // $inventarioMaterial = Inventario::where("referencia_material", trim(strtoupper($valueCSV["referencia_material"])))
             //     ->where("consecutivo", (int) $valueCSV["consecutivo"])
@@ -278,14 +267,14 @@ class PresupuestoController extends Controller
             // }
 
             $existencia_presupuesto = Presupuesto::where("inmueble_id", $valueCSV["codigo_inmueble"])
-                ->where("codigo_proyecto", $valueCSV["codigo_proyecto"])
+                ->where("codigo_proyecto", $request->codigo_proyecto)
                 ->where("referencia_material", $valueCSV["referencia_material"])->exists();
 
             if ($existencia_presupuesto) {
                 DB::rollBack();
                 return ResponseHelper::error(
                     400,
-                    "El presupuesto de este inmueble {$valueCSV['codigo_inmueble']} con el material {$valueCSV['referencia_material']} ya existe en el proyecto {$valueCSV['codigo_proyecto']}"
+                    "El presupuesto del inmueble '{$valueCSV['codigo_inmueble']}' con el material '{$valueCSV['referencia_material']}' ya existe en el proyecto '{$request->codigo_proyecto}'"
                 );
             }
             $inmueble = Inmueble::where("id", trim(strtoupper($valueCSV["codigo_inmueble"])))
@@ -293,29 +282,26 @@ class PresupuestoController extends Controller
                 ->first();
 
             if (!$inmueble) {
-                // $datosInmuebles = [
-                //     "codigo_inmueble" => trim(strtoupper($valueCSV["codigo_inmueble"])),
-                //     "codigo_proyecto" => trim(strtoupper($valueCSV["codigo_proyecto"])),
-                //     "tipo_inmueble" => $tipo_inmueble->id,
-                //     "numero_identificacion" => Auth::user()->numero_identificacion,
-                //     "created_at"=>Carbon::now(),
-                //     "updated_at"=>Carbon::now()
-                // ];
-
-                $inmueble = new Inmueble();
-                // $inmueble->id = trim(strtoupper($valueCSV["codigo_inmueble"]));
-                $inmueble->codigo_proyecto = trim(strtoupper($valueCSV["codigo_proyecto"]));
-                $inmueble->tipo_inmueble = $tipo_inmueble->id;
-
-                $inmueble->numero_identificacion = Auth::user()->numero_identificacion;
-                $inmueble->save();
-            }
-
-            if($inmueble->codigo_proyecto !== $valueCSV["codigo_proyecto"]) {
                 DB::rollBack();
                 return ResponseHelper::error(
                     400,
-                    "El inmueble {$valueCSV['codigo_inmueble']} no pertenece al proyecto {$valueCSV['codigo_proyecto']}"
+                    "El inmueble '{$valueCSV['codigo_inmueble']}' no existe"
+                );
+
+                // $inmueble = new Inmueble();
+                // // $inmueble->id = trim(strtoupper($valueCSV["codigo_inmueble"]));
+                // $inmueble->codigo_proyecto = trim(strtoupper($valueCSV["codigo_proyecto"]));
+                // $inmueble->tipo_inmueble = $tipo_inmueble->id;
+
+                // $inmueble->numero_identificacion = Auth::user()->numero_identificacion;
+                // $inmueble->save();
+            }
+
+            if($inmueble->codigo_proyecto !== $request->codigo_proyecto) {
+                DB::rollBack();
+                return ResponseHelper::error(
+                    400,
+                    "El inmueble '{$valueCSV['codigo_inmueble']}' no pertenece al proyecto '{$request->codigo_proyecto}'"
                 );
             }
 
@@ -328,7 +314,7 @@ class PresupuestoController extends Controller
                     "costo_material" => $valueCSV["costo_material"],
                     "cantidad_material" => $valueCSV["cantidad_material"],
                     "subtotal" => ($valueCSV["costo_material"] * $valueCSV["cantidad_material"]),
-                    "codigo_proyecto" => strtoupper($valueCSV["codigo_proyecto"]),
+                    "codigo_proyecto" => $request->codigo_proyecto,
                     "numero_identificacion" => auth::user()->numero_identificacion,
                     // "created_at" => Carbon::now(),
                     // "updated_at" => Carbon::now()
