@@ -37,18 +37,39 @@ class PresupuestoController extends Controller
 
         $numero_identificacion = Auth::user()->numero_identificacion;
         $templatePresupuesto = [];
-
+        DB::beginTransaction();
         foreach ($request->materiales as $material) {
             $validatedData = Validator::make($material, [
-                'referencia_material' => 'required|exists:materiales,referencia_material',
-                'costo_material'      => 'required|',
+                "referencia_material" => [
+                    "required",
+                    function ($attribute, $value, $fail) {
+                        $referencia_material = strtoupper($value);
+                        if (!Materiale::where("referencia_material",  $referencia_material)
+                            ->where("estado", "A")
+                            ->exists()) {
+                            $fail("La referencia del material '{$referencia_material}' no existe");
+                        }
+                    }
+                ],
+                // 'costo_material' => 'required',
                 "consecutivo" => "required",
                 'cantidad_material'   => 'required|numeric|min:1',
             ]);
 
 
             if ($validatedData->fails()) {
+                DB::rollBack();
                 return ResponseHelper::error(422, $validatedData->errors()->first(), $validatedData->errors());
+            }
+            $inmueble = Inmueble::where("id",$request->inmueble_id)
+            ->where("estado","A")
+            ->first();
+            if ($inmueble->codigo_proyecto !== $request->codigo_proyecto) {
+                DB::rollBack();
+                return ResponseHelper::error(
+                    400,
+                    "El inmueble '{$request->inmueble_id}' no pertenece al proyecto '{$request->codigo_proyecto}'"
+                );
             }
 
             $exisitencia = Presupuesto::where('referencia_material', $material["referencia_material"])
@@ -59,6 +80,7 @@ class PresupuestoController extends Controller
 
 
             if ($exisitencia) {
+                DB::rollBack();
                 return ResponseHelper::error(400, "Ya existe este material "
                     . $material["referencia_material"]);
             }
@@ -70,7 +92,7 @@ class PresupuestoController extends Controller
                 ->first();
 
             if ($dataMaterial->estado !== "A" || !$dataMaterial) {
-
+                DB::rollBack();
                 return ResponseHelper::error(404, "Este material no existe con código => " . $material["referencia_material"]);
             }
 
@@ -78,11 +100,13 @@ class PresupuestoController extends Controller
             $inventario = Inventario::where("referencia_material",  $dataMaterial->referencia_material)
                 ->where("consecutivo", $material["consecutivo"])->first();
             if (!$inventario) {
-
+                DB::rollBack();
                 return ResponseHelper::error(404, "El lote {$material["consecutivo"]} de este material {$material["referencia_material"]} no existe");
             }
 
-            $templatePresupuesto[] = [
+            
+
+            Presupuesto::create([
                 "inmueble_id" => strtoupper($request->inmueble_id),
                 "codigo_proyecto" => strtoupper($request->codigo_proyecto),
                 "referencia_material" => $dataMaterial->referencia_material,
@@ -90,15 +114,13 @@ class PresupuestoController extends Controller
                 "cantidad_material" => $material["cantidad_material"],
                 "subtotal" => floatval($inventario->costo * $material["cantidad_material"]),
 
-                "numero_identificacion" => $numero_identificacion,
-                'created_at' => Carbon::now(),
-                'updated_at' => Carbon::now(),
-            ];
+                "numero_identificacion" => $numero_identificacion
+            ]);
         }
 
         // return response()->json($templatePresupuesto);
-        Presupuesto::insert($templatePresupuesto);
-
+        //Presupuesto::insert($templatePresupuesto);
+        DB::commit();
         return ResponseHelper::success(201, "Se ha creado con exito");
     }
 
@@ -188,7 +210,7 @@ class PresupuestoController extends Controller
     {
         $validator = Validator::make($request->all(), [
             'file' => 'required|file',
-            "codigo_proyecto" =>"required"
+            "codigo_proyecto" => "required"
         ]);
 
         if ($validator->fails()) {
@@ -242,7 +264,7 @@ class PresupuestoController extends Controller
                     }
                 ],
                 "cantidad_material" => "required",
-                
+
             ]);
 
             if ($validatorDataCSV->fails()) {
@@ -299,7 +321,7 @@ class PresupuestoController extends Controller
                 // $inmueble->save();
             }
 
-            if($inmueble->codigo_proyecto !== $request->codigo_proyecto) {
+            if ($inmueble->codigo_proyecto !== $request->codigo_proyecto) {
                 DB::rollBack();
                 return ResponseHelper::error(
                     400,
