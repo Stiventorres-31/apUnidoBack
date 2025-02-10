@@ -13,8 +13,10 @@ use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
 use League\Csv\Reader;
+use League\Csv\Writer;
 
 class PresupuestoController extends Controller
 {
@@ -340,5 +342,102 @@ class PresupuestoController extends Controller
         DB::commit();
 
         return ResponseHelper::success(200, "Se ha cargado correctamente", $datosPresupuestos);
+    }
+
+    public function generateCSV($codigo_proyecto)
+    {
+
+        $proyecto = Proyecto::with(['inmuebles.presupuestos', "inmuebles.asignaciones"])->find($codigo_proyecto);
+
+        if (!$proyecto) {
+
+
+            return ResponseHelper::error(404, "El proyecto no existe");
+        }
+
+        // return response()->json(
+        //     [
+        //         "presupuesto" => count($proyecto->inmuebles),
+        //         "proyecto" =>    $proyecto
+        //     ]
+        // );
+
+        $archivoCSV = Writer::createFromString("");
+        $archivoCSV->setDelimiter(";");
+        $archivoCSV->setOutputBOM(Writer::BOM_UTF8);
+        $archivoCSV->insertOne([
+            "Código del proyecto",
+            "Departamento",
+            "Ciudad",
+            "Dirección",
+            "Fecha de inicio",
+            "Fecha de finalización",
+            "valorización",
+            //  "Progreso Total"
+        ]);
+        $total_subtotal_presupuesto = collect($proyecto->inmuebles)
+            ->flatMap(fn($inmueble) => $inmueble->presupuestos)
+            ->sum(fn($presupuesto) => floatval($presupuesto->subtotal));
+
+        $total_presupuestado = 0;
+        $total_asignado = 0;
+
+        // Recorrer todos los inmuebles del proyecto
+        foreach ($proyecto->inmuebles as $inmueble) {
+
+            // Calcular la cantidad total presupuestada
+            foreach ($inmueble->presupuestos as $presupuesto) {
+                $total_presupuestado += floatval($presupuesto->cantidad_material);
+            }
+
+            // Calcular la cantidad total asignada
+            foreach ($inmueble->asignaciones as $asignacion) {
+                $total_asignado += floatval($asignacion->cantidad_material);
+            }
+        }
+
+        // Evitar división por cero
+        $progreso = $total_presupuestado > 0
+            ? ($total_asignado / $total_presupuestado) * 100
+            : 0;
+        $archivoCSV->insertOne([
+            $proyecto->codigo_proyecto,
+            $proyecto->departamento_proyecto,
+            $proyecto->ciudad_municipio_proyecto,
+            $proyecto->direccion_proyecto,
+            $proyecto->fecha_inicio_proyecto,
+            $proyecto->fecha_final_proyecto,
+            number_format($total_subtotal_presupuesto, 2),
+            // $progreso
+        ]);
+        $archivoCSV->insertOne([]);
+        $archivoCSV->insertOne([
+            "Codigo del inmueble",
+            "Referencia del material",
+            "Nombre_material",
+            "Costo del material",
+            "Cantidad del material"
+        ]);
+
+        foreach ($proyecto->inmuebles as $inmueble) {
+            foreach ($inmueble->presupuestos as $presupuesto) {
+                $archivoCSV->insertOne([
+                    $presupuesto->inmueble_id,
+                    $presupuesto->referencia_material,
+                    $presupuesto->material->nombre_material,
+                    $presupuesto->costo_material,
+                    $presupuesto->cantidad_material,
+                ]);
+            }
+        }
+        // $headers = [
+        //     'Content-Type' => 'text/csv',
+        //     'Content-Disposition' => 'attachment; filename="reporte_tipo_inmuebles.csv"',
+        // ];
+        $csvContent = (string) $archivoCSV;
+        $filePath = 'reports/reporte_presupuesto.csv';
+        Storage::put($filePath, $csvContent);
+
+        return ResponseHelper::success(201, "El reporte se ha generado y guardado correctamente", ["proyecto" => $filePath]);
     }
 }

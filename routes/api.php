@@ -50,7 +50,7 @@ Route::middleware('auth:api')->prefix("proyecto")->group(function () {
     Route::post("/", [ProyectoController::class, 'store']);
     Route::put("/{codigo_proyecto}", [ProyectoController::class, 'update']);
     Route::delete("/", [ProyectoController::class, 'destroy']);
-    Route::get("/report/{id}", [ProyectoController::class, "generateCSV"]);
+    
 });
 
 Route::middleware('auth:api')->prefix("tipo_inmueble")->group(function(){
@@ -77,6 +77,7 @@ Route::middleware('auth:api')->prefix('presupuesto')->group(function () {
     // Route::delete("/{id}",[PresupuestoController::class,"destroy"]);
     // Route::get("/",[PresupuestoController::class,"index"]);
     // Route::get("/{id}",[PresupuestoController::class,"show"]);
+    Route::get("/report/{codigo_proyecto}", [PresupuestoController::class, "generateCSV"]);
     Route::delete("/", [PresupuestoController::class, "destroy"]);
 });
 

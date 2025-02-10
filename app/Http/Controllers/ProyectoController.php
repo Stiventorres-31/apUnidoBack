@@ -42,13 +42,14 @@ class ProyectoController extends Controller
                 'proyectos.numero_identificacion',
                 'proyectos.estado'
             )
-            ->where("estado","=","A")->paginate(2);
+            ->where("estado", "=", "A")->paginate(2);
         return ResponseHelper::success(200, "Listado de proyectos", ["proyectos" => $proyectos]);
     }
 
-    public function select(){
-        $proyecto = Proyecto::select("id","codigo_proyecto")->where("estado","A")->get();
-        return ResponseHelper::success(200,"Proyectos",$proyecto );
+    public function select()
+    {
+        $proyecto = Proyecto::select("id", "codigo_proyecto")->where("estado", "A")->get();
+        return ResponseHelper::success(200, "Proyectos", $proyecto);
     }
 
     public function store(Request $request)
@@ -85,7 +86,7 @@ class ProyectoController extends Controller
     public function showWithPresupuesto($codigo_proyecto)
     {
 
-        $proyecto = Proyecto::with(['inmuebles.presupuestos','inmuebles.tipo_inmueble'])->find($codigo_proyecto);
+        $proyecto = Proyecto::with(['inmuebles.presupuestos', 'inmuebles.tipo_inmueble'])->find($codigo_proyecto);
 
         if (!$proyecto) {
             return ResponseHelper::error(404, "Proyecto no encontrado");
@@ -183,59 +184,7 @@ class ProyectoController extends Controller
         return ResponseHelper::success(200, "Se ha actualizado con exto", ["proyecto" => $proyecto]);
     }
 
-    public function generateCSV($codigo_proyecto)
-    {
-
-        $proyecto = Proyecto::with(['inmuebles.presupuestos', "inmuebles.asignaciones"])->find($codigo_proyecto);
-
-        if (!$proyecto) {
-
-
-            return ResponseHelper::error(404, "El proyecto no existe");
-        }
-
-        // return response()->json(
-        //     [
-        //         "presupuesto" => count($proyecto->inmuebles[1]->presupuestos),
-        //         "proyecto" =>    $proyecto
-        //     ]
-        // );
-
-        $archivoCSV = Writer::createFromString("");
-        $archivoCSV->setDelimiter(";");
-        $archivoCSV->setOutputBOM(Writer::BOM_UTF8);
-        $archivoCSV->insertOne([
-            "Código del proyecto",
-            "Departamento",
-            "Ciudad",
-            "Dirección",
-            "Fecha de inicio",
-            "Fecha de finalización",
-            "valorización",
-            "Progeso Total"
-        ]);
-
-        foreach ($proyecto->inmuebles->presupuestos as $presupuesto) {
-            $archivoCSV->insertOne([
-                $presupuesto["codigo_proyecto"],
-                $presupuesto["nombre_inmueble"],
-                $presupuesto["referencia_material"],
-                $presupuesto["material"]["nombre_material"],
-                $presupuesto["costo_material"],
-                $presupuesto["cantidad_material"],
-
-            ]);
-        }
-        // $headers = [
-        //     'Content-Type' => 'text/csv',
-        //     'Content-Disposition' => 'attachment; filename="reporte_tipo_inmuebles.csv"',
-        // ];
-        $csvContent = (string) $archivoCSV;
-        $filePath = 'reports/reporte_presupuesto.csv';
-        Storage::put($filePath, $csvContent);
-
-        return ResponseHelper::success(201, "El reporte se ha generado y guardado correctamente", ["proyecto" => $filePath]);
-    }
+    
 
     public function destroy(Request $request)
     {
