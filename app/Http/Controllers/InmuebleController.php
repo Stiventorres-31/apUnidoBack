@@ -107,9 +107,9 @@ class InmuebleController extends Controller
         return ResponseHelper::success(201, "Inmueble creado con éxito");
     }
 
-    public function destroy($id)
+    public function destroy(Request $request)
     {
-        $validator = Validator::make(['id' => $id], [
+        $validator = Validator::make($request->all(), [
             'id' => 'required|exists:inmuebles,id', // Verifica que exista el ID en la tabla tipo_inmuebles
         ]);
 
@@ -117,7 +117,7 @@ class InmuebleController extends Controller
             return ResponseHelper::error(422, $validator->errors()->first(), $validator->errors());
         }
 
-        $inmueble = Inmueble::find($id);
+        $inmueble = Inmueble::find($request->id);
 
         $existePresupuesto = Presupuesto::where('inmueble_id', '=', $inmueble->inmueble_id)->exists();
         $existeAsignacion = Asignacione::where('inmueble_id', '=', $inmueble->inmueble_id)->exists();
