@@ -6,6 +6,7 @@ use App\Helpers\ResponseHelper;
 use App\Models\User;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
 
@@ -123,7 +124,7 @@ class UserController extends Controller
     public function changePassword(Request $request)
     {
         $validateData = Validator::make($request->all(), [
-            "numero_identificacion" => "required|exists:usuarios,numero_identificacion",
+            
             "password" => "required|min:6",
             "new_password" => "required|min:6|confirmed",
         ]);
@@ -134,7 +135,7 @@ class UserController extends Controller
         }
 
         // Obtener el usuario autenticado
-        $usuario = $request->user();
+        $usuario = User::find(Auth::user()->id);
 
         // Verificar si la contraseña actual es correcta
         if (!Hash::check($request->password, $usuario->password)) {
@@ -164,7 +165,7 @@ class UserController extends Controller
         }
 
         $usuario = $request->user();
-        $usuario->password = Hash::make($request->input('new_password'));
+        $usuario->password = Hash::make($request->new_password);
         $usuario->save();
 
      
