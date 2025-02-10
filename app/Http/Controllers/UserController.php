@@ -124,33 +124,32 @@ class UserController extends Controller
     public function changePassword(Request $request)
     {
         $validateData = Validator::make($request->all(), [
-            
             "password" => "required|min:6",
             "new_password" => "required|min:6|confirmed",
         ]);
-
+    
+        // Si la validación falla, retornar error
         if ($validateData->fails()) {
-       
             return ResponseHelper::error(422, $validateData->errors()->first(), $validateData->errors());
         }
-
+    
         // Obtener el usuario autenticado
-        $usuario = User::find(Auth::user()->id);
-
+        $usuario = Auth::user();
+    
         // Verificar si la contraseña actual es correcta
         if (!Hash::check($request->password, $usuario->password)) {
-         
+            return ResponseHelper::error(400, "La contraseña actual no es correcta", []);
+        }
 
-            return ResponseHelper::error(400,"La contraseña actual no es correcta",[]);
+        if (!$usuario instanceof User) {
+            return ResponseHelper::error(500, "No se pudo obtener el usuario autenticado", []);
         }
 
         // Actualizar la contraseña
         $usuario->password = Hash::make($request->input('new_password'));
-        $usuario->save();
-
-
-
-        return ResponseHelper::success(200,"Contraseña actualizada con éxito",["usuario" => $usuario]);
+        $usuario->save(); // ⚠️ IMPORTANTE: Guardar los cambios
+    
+        return ResponseHelper::success(200, "Contraseña actualizada con éxito", []);
     }
 
     public function changePasswordAdmin(Request $request)
@@ -164,7 +163,7 @@ class UserController extends Controller
             return ResponseHelper::error(422,$validateData->errors()->first(),$validateData->errors());
         }
 
-        $usuario = $request->user();
+        $usuario = User::where("numero_identificacion",$request->numero_identificacion)->first();
         $usuario->password = Hash::make($request->new_password);
         $usuario->save();
 
