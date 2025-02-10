@@ -58,7 +58,8 @@ class UserController extends Controller
         $usuario = new User();
         $usuario->numero_identificacion = $request->numero_identificacion;
         $usuario->nombre_completo = strtoupper($request->nombre_completo);
-        $usuario->password = hash::make($request->password);
+        $usuario->password = ($request->password);
+       // $usuario->password = hash::make($request->password);
         $usuario->rol_usuario = strtoupper($request->rol_usuario["name"]);
         $usuario->estado = 'A';
 

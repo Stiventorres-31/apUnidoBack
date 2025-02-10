@@ -12,6 +12,7 @@ use App\Models\TipoInmueble;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 use League\Csv\Reader;
 
@@ -221,7 +222,8 @@ class PresupuestoController extends Controller
         $datosInmuebles = [];
 
 
-
+        // Iniciar una transacción
+        DB::beginTransaction();
         foreach ($archivoCSV->getRecords() as $valueCSV) {
             $validatorDataCSV = Validator::make($valueCSV, [
                 "codigo_inmueble" => "required",
@@ -253,6 +255,7 @@ class PresupuestoController extends Controller
             ]);
 
             if ($validatorDataCSV->fails()) {
+                DB::rollBack();
                 return ResponseHelper::error(422, $validatorDataCSV->errors()->first(), $validatorDataCSV->errors());
             }
 
@@ -261,6 +264,7 @@ class PresupuestoController extends Controller
                 ->first();
 
             if (!$tipo_inmueble) {
+                DB::rollBack();
                 return ResponseHelper::error(404, "El tipo de inmueble '{$tipo_inmueble}' no existe");
             }
 
@@ -274,12 +278,15 @@ class PresupuestoController extends Controller
             // }
 
             $existencia_presupuesto = Presupuesto::where("inmueble_id", $valueCSV["codigo_inmueble"])
-            ->where("codigo_proyecto",$valueCSV["codigo_proyecto"])
-            ->where("referencia_material",$valueCSV["referencia_material"])->exists();
+                ->where("codigo_proyecto", $valueCSV["codigo_proyecto"])
+                ->where("referencia_material", $valueCSV["referencia_material"])->exists();
 
-            if($existencia_presupuesto){
-                return ResponseHelper::error(400,
-                "El presupuesto de este inmueble {$valueCSV['codigo_inmueble']} con el material {$valueCSV['referencia_material']} ya existe en el proyecto {$valueCSV['codigo_proyecto']}");
+            if ($existencia_presupuesto) {
+                DB::rollBack();
+                return ResponseHelper::error(
+                    400,
+                    "El presupuesto de este inmueble {$valueCSV['codigo_inmueble']} con el material {$valueCSV['referencia_material']} ya existe en el proyecto {$valueCSV['codigo_proyecto']}"
+                );
             }
             $inmueble = Inmueble::where("id", trim(strtoupper($valueCSV["codigo_inmueble"])))
                 ->where("estado", "A")
@@ -304,25 +311,47 @@ class PresupuestoController extends Controller
                 $inmueble->save();
             }
 
+            if($inmueble->codigo_proyecto !== $valueCSV["codigo_proyecto"]) {
+                DB::rollBack();
+                return ResponseHelper::error(
+                    400,
+                    "El inmueble {$valueCSV['codigo_inmueble']} no pertenece al proyecto {$valueCSV['codigo_proyecto']}"
+                );
+            }
 
 
+            Presupuesto::create(
+                [
 
-            $datosPresupuestos[] = [
+                    "inmueble_id" => $inmueble->id,
+                    "referencia_material" => trim(strtoupper($valueCSV["referencia_material"])),
+                    "costo_material" => $valueCSV["costo_material"],
+                    "cantidad_material" => $valueCSV["cantidad_material"],
+                    "subtotal" => ($valueCSV["costo_material"] * $valueCSV["cantidad_material"]),
+                    "codigo_proyecto" => strtoupper($valueCSV["codigo_proyecto"]),
+                    "numero_identificacion" => auth::user()->numero_identificacion,
+                    // "created_at" => Carbon::now(),
+                    // "updated_at" => Carbon::now()
+                ]
+            );
 
-                "inmueble_id" => $inmueble->id,
-                "referencia_material" => trim(strtoupper($valueCSV["referencia_material"])),
-                "costo_material" => $valueCSV["costo_material"],
-                "cantidad_material" => $valueCSV["cantidad_material"],
-                "subtotal" => ($valueCSV["costo_material"] * $valueCSV["cantidad_material"]),
-                "codigo_proyecto" => strtoupper($valueCSV["codigo_proyecto"]),
-                "numero_identificacion" => auth::user()->numero_identificacion,
-                "created_at" => Carbon::now(),
-                "updated_at" => Carbon::now()
-            ];
+
+            // $datosPresupuestos[] = [
+
+            //     "inmueble_id" => $inmueble->id,
+            //     "referencia_material" => trim(strtoupper($valueCSV["referencia_material"])),
+            //     "costo_material" => $valueCSV["costo_material"],
+            //     "cantidad_material" => $valueCSV["cantidad_material"],
+            //     "subtotal" => ($valueCSV["costo_material"] * $valueCSV["cantidad_material"]),
+            //     "codigo_proyecto" => strtoupper($valueCSV["codigo_proyecto"]),
+            //     "numero_identificacion" => auth::user()->numero_identificacion,
+            //     "created_at" => Carbon::now(),
+            //     "updated_at" => Carbon::now()
+            // ];
         }
 
-        Presupuesto::insert($datosPresupuestos);
-
+        //Presupuesto::insert($datosPresupuestos);
+        DB::commit();
 
         return ResponseHelper::success(200, "Se ha cargado correctamente", $datosPresupuestos);
     }
