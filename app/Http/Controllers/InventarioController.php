@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Helpers\ResponseHelper;
 use App\Models\Inventario;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Validator;
 
 class InventarioController extends Controller
@@ -12,34 +13,41 @@ class InventarioController extends Controller
     public function store(Request $request)
     {
         $validator = Validator::make($request->all(), [
-            "referencia_material" => "required|exists:materiales,referencia_material",
-            "numero_identificacion" => "required|exists:usuarios,numero_identificacion|max:20|min:6",
-            "costo" => "required|regex:/^\d{1,10}(\.\d{1,2})?$/",
-            "cantidad" => "required|numeric|min:0",
-            "nit_proveedor" => "required|min:6",
-            "nombre_proveedor" => "required|min:6",
-            "descripcion_proveedor" => "required|min:6",
+            "referencia_material" => "required|string|exists:materiales,referencia_material",
+            "costo" => "required|numeric",
+            "cantidad" => "required|numeric",
+            "nit_proveedor" => "required",
+            "nombre_proveedor" => "required",
         ]);
 
         if ($validator->fails()) {
+            
+
             return ResponseHelper::error(422,$validator->errors()->first(),$validator->errors());
         }
 
-        // return response()->json(Inventario::max("referencia_material") );
-        $inventario = new Inventario();
-            
-        $inventario->referencia_material = $request->referencia_material;
-        $inventario->numero_identificacion = $request->numero_identificacion;
-        $inventario->costo = $request->costo;
-        $inventario->cantidad = $request->cantidad;
-        $inventario->nit_proveedor = $request->nit_proveedor;
-        $inventario->nombre_proveedor = $request->nombre_proveedor;
-        $inventario->descripcion_proveedor = $request->descripcion_proveedor;
-        $inventario->consecutivo =  Inventario::max("referencia_material") + 1;
-        $inventario->estado = "A";
-        $inventario->save();
+        if (!is_string($request->referencia_material)) {
+          
 
-        return ResponseHelper::success(201,"Se ha registrado con exito",["inventario" => $inventario]);
+            return ResponseHelper::error(422,"El campo referencia_material no es válido");
+
+        }
+        $consecutivo = Inventario::where("referencia_material", "=", $request->referencia_material)
+            ->max("consecutivo") ?? 0;
+
+        $inventario =  new Inventario();
+        $inventario->referencia_material = strtoupper(trim($request->referencia_material));
+        // return response()->json($request->referencia_material);
+        $inventario->consecutivo = $consecutivo + 1;
+        $inventario->costo = (float) trim($request->costo);
+        $inventario->cantidad = trim($request->cantidad);
+        $inventario->nit_proveedor = trim($request->nit_proveedor);
+        $inventario->nombre_proveedor = strtoupper(trim($request->nombre_proveedor));
+        $inventario->descripcion_proveedor = "Fer";
+        $inventario->numero_identificacion = Auth::user()->numero_identificacion;
+        $inventario->save();
+        
+        return ResponseHelper::success(200,"Se ha registrado con exito",["inventario" => $inventario]);
 
     }
 }
