@@ -98,7 +98,7 @@ class ProyectoController extends Controller
 
         foreach ($proyectoArray['inmuebles'] as &$inmueble) {
             $inmueble['total_presupuesto'] = collect($inmueble['presupuestos'])->sum('subtotal');
-            // unset($inmueble['presupuestos']);
+            unset($inmueble['presupuestos']);
         }
 
         return ResponseHelper::success(200, "Proyecto obtenido", ["proyecto" => $proyectoArray]);
