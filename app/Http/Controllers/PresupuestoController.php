@@ -36,7 +36,7 @@ class PresupuestoController extends Controller
         }
 
         $numero_identificacion = Auth::user()->numero_identificacion;
-        $templatePresupuesto = [];
+        
         DB::beginTransaction();
         foreach ($request->materiales as $material) {
             $validatedData = Validator::make($material, [
@@ -51,8 +51,8 @@ class PresupuestoController extends Controller
                         }
                     }
                 ],
-                // 'costo_material' => 'required',
-                "consecutivo" => "required",
+                'costo_material' => 'required|numeric',
+                //"consecutivo" => "required",
                 'cantidad_material'   => 'required|numeric|min:1',
             ]);
 
@@ -61,9 +61,11 @@ class PresupuestoController extends Controller
                 DB::rollBack();
                 return ResponseHelper::error(422, $validatedData->errors()->first(), $validatedData->errors());
             }
+
             $inmueble = Inmueble::where("id",$request->inmueble_id)
             ->where("estado","A")
             ->first();
+            
             if ($inmueble->codigo_proyecto !== $request->codigo_proyecto) {
                 DB::rollBack();
                 return ResponseHelper::error(
