@@ -24,16 +24,15 @@ class InventarioController extends Controller
         ]);
 
         if ($validator->fails()) {
-            
 
-            return ResponseHelper::error(422,$validator->errors()->first(),$validator->errors());
+
+            return ResponseHelper::error(422, $validator->errors()->first(), $validator->errors());
         }
 
         if (!is_string($request->referencia_material)) {
-          
 
-            return ResponseHelper::error(422,"El campo referencia_material no es válido");
 
+            return ResponseHelper::error(422, "El campo referencia_material no es válido");
         }
         $consecutivo = Inventario::where("referencia_material", "=", $request->referencia_material)
             ->max("consecutivo") ?? 0;
@@ -50,8 +49,7 @@ class InventarioController extends Controller
         $inventario->numero_identificacion = Auth::user()->numero_identificacion;
         $inventario->save();
 
-        return ResponseHelper::success(200,"Se ha registrado con exito",["inventario" => $inventario]);
-
+        return ResponseHelper::success(200, "Se ha registrado con exito", ["inventario" => $inventario]);
     }
 
     public function update(Request $request)
@@ -59,50 +57,47 @@ class InventarioController extends Controller
 
         try {
             $validatedata = Validator::make($request->all(), [
-                "referencia_material"=>"required|exists:inventarios,referencia_material",
-                "consecutivo"=>"required|numeric",
+                "referencia_material" => "required|exists:inventarios,referencia_material",
+                "consecutivo" => "required|numeric",
                 "costo_material" => "required|numeric",
                 "cantidad" => "required|numeric|min:1"
             ]);
-    
+
             // Si la validación falla, devolver una respuesta de error 422
             if ($validatedata->fails()) {
-                return ResponseHelper::error(422,$validatedata->errors()->first(),$validatedata->errors());
+                return ResponseHelper::error(422, $validatedata->errors()->first(), $validatedata->errors());
             }
-    
+
             // Buscar el material por referencia
             $inventario = Inventario::where('referencia_material', trim($request->referencia_material))
-            ->where("consecutivo",$request->consecutivo)
-            ->first();
+                ->where("consecutivo", $request->consecutivo)
+                ->first();
+
            
-            // Verificar si el material existe
             if (!$inventario) {
-               
-                return ResponseHelper::error(404,"Inventario no encontrado");
+
+                return ResponseHelper::error(404, "Inventario no encontrado");
             }
-            
-           
-           
-            // Actualizar los datos del material
 
-            $inventario->update([
-                $inventario->costo = "1182",
-                $inventario->cantidad = 50
+
+
+            Inventario::where('referencia_material', $request->referencia_material)
+            ->where('consecutivo', $request->consecutivo)
+            ->update([
+                'costo' => $request->costo_material,
+                'cantidad' => $request->cantidad
             ]);
-            // return $inventario;
-          
-    
-            return ResponseHelper::success(200,
-             "El inventario se ha actualizado con exito", ['inventario' => $inventario]);
-        } catch (Throwable $th) {
-           return $th;
-        }
-
         
+        
+            return ResponseHelper::success(
+                200,
+                "El inventario se ha actualizado con exito",
+                ['inventario' => $inventario]
+            );
+        } catch (Throwable $th) {
+            return ResponseHelper::error(500, "Error interno del servidor", ["error" => $th->getMessage()]);
+        }
     }
 
-    public function show($referencia_material){
-
-
-    }
+    public function show($referencia_material) {}
 }
