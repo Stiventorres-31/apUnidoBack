@@ -18,7 +18,7 @@ return new class extends Migration
             $table->string('password');
             $table->string('rol_usuario', 20);
             $table->char("estado",1)->default("A");
-            $table->index(["numero_identificacion","nombre_completo"]);
+            // $table->index(["numero_identificacion","nombre_completo"]);
             $table->unique(["numero_identificacion","nombre_completo"]);
             $table->rememberToken();
             $table->timestamps();
