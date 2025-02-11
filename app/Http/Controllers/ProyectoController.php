@@ -211,7 +211,7 @@ class ProyectoController extends Controller
             // $proyecto->fecha_final_proyecto = Carbon::createFromFormat("d/m/Y", $request->fecha_final_proyecto)->format("Y-m-d");
 
             $proyecto->fecha_inicio_proyecto = $request->fecha_inicio_proyecto;
-            $proyecto->fecha_final_proyecto = $request->fecha_inicio_proyecto;
+            $proyecto->fecha_final_proyecto = $request->fecha_final_proyecto;
             $proyecto->save();
 
             return ResponseHelper::success(200, "Se ha actualizado con exto", ["proyecto" => $proyecto]);
