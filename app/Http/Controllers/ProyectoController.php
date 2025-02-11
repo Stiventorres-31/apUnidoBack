@@ -168,8 +168,8 @@ class ProyectoController extends Controller
 
     public function update(Request $request, $codigo_proyecto)
     {
-        $validator = Validator::make(["codigo_material"], [
-            "codigo_material" => "required|regex:/^[A-Za-z0-9\-]+$/"
+        $validator = Validator::make(["codigo_proyecto"=>$codigo_proyecto], [
+            "codigo_proyecto" => "required|regex:/^[A-Za-z0-9\-]+$/"
         ]);
 
         if ($validator->fails()) {
