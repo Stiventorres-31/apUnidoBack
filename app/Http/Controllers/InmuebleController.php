@@ -29,7 +29,7 @@ class InmuebleController extends Controller
             return ResponseHelper::error(422, $validator->errors()->first(), $validator->errors());
         }
 
-        $inmueble = Inmueble::find($id);
+        $inmueble = Inmueble::with(["tipo_inmueble","presupuestos","asignaciones"])->find($id);
 
         return ResponseHelper::success(200, "Se ha encontrado el inmueble", ["inmueble" => $inmueble]);
     }
@@ -129,7 +129,7 @@ class InmuebleController extends Controller
         }
 
         $inmueble->estado = "E";
-$inmueble->save();
+        $inmueble->save();
         return ResponseHelper::success(200, "Se ha eliminado con exito");
     }
 
