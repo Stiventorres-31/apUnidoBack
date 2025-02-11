@@ -152,7 +152,8 @@ class PresupuestoController extends Controller
             "codigo_proyecto" => "required|exists:proyectos,codigo_proyecto",
             "inmueble_id" => "required|exists:inmuebles,id",
             "referencia_material" => "required|exists:materiales,referencia_material",
-            "cantidad_material" => "required|numeric"
+            "cantidad_material" => "required|numeric",
+            "costo_material" => "required|numeric"
         ]);
 
         if ($validator->fails()) {
@@ -168,7 +169,9 @@ class PresupuestoController extends Controller
             return ResponseHelper::error(404, "El presupuesto con los datos proporcionados no existe.");
         }
         $presupuesto->cantidad_material = $request->cantidad_material;
-        $presupuesto->subtotal = $presupuesto->costo_material * $request->cantidad_material;
+        $presupuesto->costo_material = $request->costo_material;
+
+        $presupuesto->subtotal = $request->costo_material * $request->cantidad_material;
         $presupuesto->save();
 
         return ResponseHelper::success(200, "Se ha actualizado con exito");
@@ -199,7 +202,7 @@ class PresupuestoController extends Controller
         }
 
 
-        // $presupuesto->delete(); 
+        //$presupuesto->delete(); 
 
 
 
