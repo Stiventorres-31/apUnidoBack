@@ -13,10 +13,12 @@ use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
 use League\Csv\Reader;
 use League\Csv\Writer;
+use Throwable;
 
 class PresupuestoController extends Controller
 {
@@ -35,95 +37,100 @@ class PresupuestoController extends Controller
             return ResponseHelper::error(422, $validatedData->errors()->first(), $validatedData->errors());
         }
 
-        $numero_identificacion = Auth::user()->numero_identificacion;
-        
-        DB::beginTransaction();
-        foreach ($request->materiales as $material) {
-            $validatedData = Validator::make($material, [
-                "referencia_material" => [
-                    "required",
-                    function ($attribute, $value, $fail) {
-                        $referencia_material = strtoupper($value);
-                        if (!Materiale::where("referencia_material",  $referencia_material)
-                            ->where("estado", "A")
-                            ->exists()) {
-                            $fail("La referencia del material '{$referencia_material}' no existe");
+        try {
+            $numero_identificacion = Auth::user()->numero_identificacion;
+
+            DB::beginTransaction();
+            foreach ($request->materiales as $material) {
+                $validatedData = Validator::make($material, [
+                    "referencia_material" => [
+                        "required",
+                        function ($attribute, $value, $fail) {
+                            $referencia_material = strtoupper($value);
+                            if (!Materiale::where("referencia_material",  $referencia_material)
+                                ->where("estado", "A")
+                                ->exists()) {
+                                $fail("La referencia del material '{$referencia_material}' no existe");
+                            }
                         }
-                    }
-                ],
-                'costo_material' => 'required|numeric',
-                //"consecutivo" => "required",
-                'cantidad_material'   => 'required|numeric|min:1',
-            ]);
+                    ],
+                    'costo_material' => 'required|numeric',
+                    //"consecutivo" => "required",
+                    'cantidad_material'   => 'required|numeric|min:1',
+                ]);
 
 
-            if ($validatedData->fails()) {
-                DB::rollBack();
-                return ResponseHelper::error(422, $validatedData->errors()->first(), $validatedData->errors());
+                if ($validatedData->fails()) {
+                    DB::rollBack();
+                    return ResponseHelper::error(422, $validatedData->errors()->first(), $validatedData->errors());
+                }
+
+                $inmueble = Inmueble::where("id", $request->inmueble_id)
+                    ->where("estado", "A")
+                    ->first();
+
+                if ($inmueble->codigo_proyecto !== $request->codigo_proyecto) {
+                    DB::rollBack();
+                    return ResponseHelper::error(
+                        400,
+                        "El inmueble '{$request->inmueble_id}' no pertenece al proyecto '{$request->codigo_proyecto}'"
+                    );
+                }
+
+                $exisitencia = Presupuesto::where('referencia_material', $material["referencia_material"])
+
+                    ->where("codigo_proyecto",  $request->codigo_proyecto)
+                    ->where("inmueble_id", $request->inmueble_id)
+                    ->first();
+
+
+                if ($exisitencia) {
+                    DB::rollBack();
+                    return ResponseHelper::error(400, "Ya existe este material "
+                        . $material["referencia_material"]);
+                }
+
+                $dataMaterial = Materiale::where(
+                    'referencia_material',
+                    strtoupper($material["referencia_material"])
+                )
+                    ->first();
+
+                if ($dataMaterial->estado !== "A" || !$dataMaterial) {
+                    DB::rollBack();
+                    return ResponseHelper::error(404, "Este material no existe con código => " . $material["referencia_material"]);
+                }
+
+
+                $inventario = Inventario::where("referencia_material",  $dataMaterial->referencia_material)
+                    ->where("consecutivo", $material["consecutivo"])->first();
+                if (!$inventario) {
+                    DB::rollBack();
+                    return ResponseHelper::error(404, "El lote {$material["consecutivo"]} de este material {$material["referencia_material"]} no existe");
+                }
+
+
+
+                Presupuesto::create([
+                    "inmueble_id" => strtoupper($request->inmueble_id),
+                    "codigo_proyecto" => strtoupper($request->codigo_proyecto),
+                    "referencia_material" => $dataMaterial->referencia_material,
+                    "costo_material" => $inventario->costo,
+                    "cantidad_material" => $material["cantidad_material"],
+                    "subtotal" => floatval($inventario->costo * $material["cantidad_material"]),
+
+                    "numero_identificacion" => $numero_identificacion
+                ]);
             }
 
-            $inmueble = Inmueble::where("id",$request->inmueble_id)
-            ->where("estado","A")
-            ->first();
-            
-            if ($inmueble->codigo_proyecto !== $request->codigo_proyecto) {
-                DB::rollBack();
-                return ResponseHelper::error(
-                    400,
-                    "El inmueble '{$request->inmueble_id}' no pertenece al proyecto '{$request->codigo_proyecto}'"
-                );
-            }
-
-            $exisitencia = Presupuesto::where('referencia_material', $material["referencia_material"])
-
-                ->where("codigo_proyecto",  $request->codigo_proyecto)
-                ->where("inmueble_id", $request->inmueble_id)
-                ->first();
-
-
-            if ($exisitencia) {
-                DB::rollBack();
-                return ResponseHelper::error(400, "Ya existe este material "
-                    . $material["referencia_material"]);
-            }
-
-            $dataMaterial = Materiale::where(
-                'referencia_material',
-                strtoupper($material["referencia_material"])
-            )
-                ->first();
-
-            if ($dataMaterial->estado !== "A" || !$dataMaterial) {
-                DB::rollBack();
-                return ResponseHelper::error(404, "Este material no existe con código => " . $material["referencia_material"]);
-            }
-
-
-            $inventario = Inventario::where("referencia_material",  $dataMaterial->referencia_material)
-                ->where("consecutivo", $material["consecutivo"])->first();
-            if (!$inventario) {
-                DB::rollBack();
-                return ResponseHelper::error(404, "El lote {$material["consecutivo"]} de este material {$material["referencia_material"]} no existe");
-            }
-
-            
-
-            Presupuesto::create([
-                "inmueble_id" => strtoupper($request->inmueble_id),
-                "codigo_proyecto" => strtoupper($request->codigo_proyecto),
-                "referencia_material" => $dataMaterial->referencia_material,
-                "costo_material" => $inventario->costo,
-                "cantidad_material" => $material["cantidad_material"],
-                "subtotal" => floatval($inventario->costo * $material["cantidad_material"]),
-
-                "numero_identificacion" => $numero_identificacion
-            ]);
+            // return response()->json($templatePresupuesto);
+            //Presupuesto::insert($templatePresupuesto);
+            DB::commit();
+            return ResponseHelper::success(201, "Se ha creado con exito");
+        } catch (Throwable $th) {
+            Log::error("Error al registrar un presupuesto " . $th->getMessage());
+            return ResponseHelper::error(500, "Error interno en el servido");
         }
-
-        // return response()->json($templatePresupuesto);
-        //Presupuesto::insert($templatePresupuesto);
-        DB::commit();
-        return ResponseHelper::success(201, "Se ha creado con exito");
     }
 
     public function show(Request $request)
@@ -138,14 +145,16 @@ class PresupuestoController extends Controller
             return ResponseHelper::error(422, $validator->errors()->first(), $validator->errors());
         }
 
-        $presupuesto = Presupuesto::where("codigo_proyecto", $request->codigo_proyecto)
-            ->where("inmueble_id", $request->inmueble_id)
-            ->where("referencia_material", $request->referencia_material)
-            ->first();
-
-
-
-        return ResponseHelper::success(200, "Se ha obtenido con exito", ["presupuesto" => $presupuesto]);
+        try {
+            $presupuesto = Presupuesto::where("codigo_proyecto", $request->codigo_proyecto)
+                ->where("inmueble_id", $request->inmueble_id)
+                ->where("referencia_material", $request->referencia_material)
+                ->first();
+            return ResponseHelper::success(200, "Se ha obtenido con exito", ["presupuesto" => $presupuesto]);
+        } catch (Throwable $th) {
+            Log::error("Error al consultar un presupuesto " . $th->getMessage());
+            return ResponseHelper::error(500, "Error interno en el servidor");
+        }
     }
 
     public function update(Request $request)
@@ -162,21 +171,26 @@ class PresupuestoController extends Controller
             return ResponseHelper::error(422, $validator->errors()->first(), $validator->errors());
         }
 
-        $presupuesto = Presupuesto::where("codigo_proyecto", $request->codigo_proyecto)
-            ->where("inmueble_id", $request->inmueble_id)
-            ->where("referencia_material", $request->referencia_material)
-            ->first();
+        try {
+            $presupuesto = Presupuesto::where("codigo_proyecto", $request->codigo_proyecto)
+                ->where("inmueble_id", $request->inmueble_id)
+                ->where("referencia_material", $request->referencia_material)
+                ->first();
 
-        if (!$presupuesto) {
-            return ResponseHelper::error(404, "El presupuesto con los datos proporcionados no existe.");
+            if (!$presupuesto) {
+                return ResponseHelper::error(404, "El presupuesto con los datos proporcionados no existe.");
+            }
+            $presupuesto->cantidad_material = $request->cantidad_material;
+            $presupuesto->costo_material = $request->costo_material;
+
+            $presupuesto->subtotal = $request->costo_material * $request->cantidad_material;
+            $presupuesto->save();
+
+            return ResponseHelper::success(200, "Se ha actualizado con exito");
+        } catch (Throwable $th) {
+            Log::error("Error al actualizar un presupuesto " . $th->getMessage());
+            return ResponseHelper::error(500, "Error interno en el servidor");
         }
-        $presupuesto->cantidad_material = $request->cantidad_material;
-        $presupuesto->costo_material = $request->costo_material;
-
-        $presupuesto->subtotal = $request->costo_material * $request->cantidad_material;
-        $presupuesto->save();
-
-        return ResponseHelper::success(200, "Se ha actualizado con exito");
     }
 
     public function destroy(Request $request)
@@ -193,22 +207,24 @@ class PresupuestoController extends Controller
             return ResponseHelper::error(422, $validatedData->errors()->first(), $validatedData->errors());
         }
 
-        $presupuesto = Presupuesto::where([
-            'inmueble_id' => $request->inmueble_id,
-            'referencia_material' => $request->referencia_material,
-            'codigo_proyecto' => $request->codigo_proyecto
-        ])->delete();
+        try {
+            $presupuesto = Presupuesto::where([
+                'inmueble_id' => $request->inmueble_id,
+                'referencia_material' => $request->referencia_material,
+                'codigo_proyecto' => $request->codigo_proyecto
+            ])->delete();
+    
+            if (!$presupuesto) {
+                return ResponseHelper::error(404, "Presupuesto no encontrado");
+            }
 
-        if (!$presupuesto) {
-            return ResponseHelper::error(404, "Presupuesto no encontrado");
+            return ResponseHelper::success(200, "Se ha eliminado con exito");
+
+        } catch (Throwable $th) {
+            Log::error("Error al eliminar un presupuesto " . $th->getMessage());
+            return ResponseHelper::error(500,"Error interno en el servidor");
         }
-
-
-        //$presupuesto->delete(); 
-
-
-
-        return ResponseHelper::success(200, "Se ha eliminado con exito");
+        
     }
 
     public function fileMasivo(Request $request)
@@ -223,152 +239,114 @@ class PresupuestoController extends Controller
         }
 
 
-        $cabecera = [
-            "codigo_inmueble",
-            "referencia_material",
-            "costo_material",
-            "cantidad_material"
-        ];
-
-        $file = $request->file('file');
-        $filePath = $file->getRealPath();
-
-        $archivoCSV = Reader::createFromPath($filePath, "r");
-        $archivoCSV->setDelimiter(';');;
-        $archivoCSV->setHeaderOffset(0); //obtenemos la cabecera
-
-
-        $archivoCabecera = $archivoCSV->getHeader();
-
-        // return $archivoCabecera;
-
-        if ($archivoCabecera !== $cabecera) {
-            return ResponseHelper::error(422, "El archivo no tiene la estructura requerida");
-        }
-
-
-        $datosPresupuestos = [];
-        $datosInmuebles = [];
-
-
-        // Iniciar una transacción
-        DB::beginTransaction();
-        foreach ($archivoCSV->getRecords() as $valueCSV) {
-            $validatorDataCSV = Validator::make($valueCSV, [
-                "codigo_inmueble" => "required",
-                "costo_material" => "required",
-                "referencia_material" => [
-                    "required",
-                    function ($attribute, $value, $fail) {
-                        $referencia_material = strtoupper($value);
-                        if (!Materiale::where("referencia_material",  $referencia_material)
-                            ->where("estado", "A")
-                            ->exists()) {
-                            $fail("La referencia del material '{$referencia_material}' no existe");
+        try{
+            $cabecera = [
+                "codigo_inmueble",
+                "referencia_material",
+                "costo_material",
+                "cantidad_material"
+            ];
+    
+            $file = $request->file('file');
+            $filePath = $file->getRealPath();
+    
+            $archivoCSV = Reader::createFromPath($filePath, "r");
+            $archivoCSV->setDelimiter(';');;
+            $archivoCSV->setHeaderOffset(0); //obtenemos la cabecera
+    
+    
+            $archivoCabecera = $archivoCSV->getHeader();
+    
+            if ($archivoCabecera !== $cabecera) {
+                return ResponseHelper::error(422, "El archivo no tiene la estructura requerida");
+            }
+    
+            // Iniciar una transacción
+            DB::beginTransaction();
+            foreach ($archivoCSV->getRecords() as $valueCSV) {
+                $validatorDataCSV = Validator::make($valueCSV, [
+                    "codigo_inmueble" => "required",
+                    "costo_material" => "required",
+                    "referencia_material" => [
+                        "required",
+                        function ($attribute, $value, $fail) {
+                            $referencia_material = strtoupper($value);
+                            if (!Materiale::where("referencia_material",  $referencia_material)
+                                ->where("estado", "A")
+                                ->exists()) {
+                                $fail("La referencia del material '{$referencia_material}' no existe");
+                            }
                         }
-                    }
-                ],
-                "cantidad_material" => "required",
-
-            ]);
-
-            if ($validatorDataCSV->fails()) {
-                DB::rollBack();
-                return ResponseHelper::error(422, $validatorDataCSV->errors()->first(), $validatorDataCSV->errors());
-            }
-
-            // $tipo_inmueble = TipoInmueble::where("nombre_tipo_inmueble",  trim(strtoupper($valueCSV["tipo_inmueble"])))
-            //     ->where("estado", "A")
-            //     ->first();
-
-            // if (!$tipo_inmueble) {
-            //     DB::rollBack();
-            //     return ResponseHelper::error(404, "El tipo de inmueble '{$tipo_inmueble}' no existe");
-            // }
-
-            // $inventarioMaterial = Inventario::where("referencia_material", trim(strtoupper($valueCSV["referencia_material"])))
-            //     ->where("consecutivo", (int) $valueCSV["consecutivo"])
-            //     ->where("estado", "A")
-            //     ->first();
-
-            // if (!$inventarioMaterial) {
-            //     return ResponseHelper::error(404, "El material '{$valueCSV["referencia_material"]}' con el lote '{$valueCSV["consecutivo"]}' no existe");
-            // }
-
-            $existencia_presupuesto = Presupuesto::where("inmueble_id", $valueCSV["codigo_inmueble"])
-                ->where("codigo_proyecto", $request->codigo_proyecto)
-                ->where("referencia_material", $valueCSV["referencia_material"])->exists();
-
-            if ($existencia_presupuesto) {
-                DB::rollBack();
-                return ResponseHelper::error(
-                    400,
-                    "El presupuesto del inmueble '{$valueCSV['codigo_inmueble']}' con el material '{$valueCSV['referencia_material']}' ya existe en el proyecto '{$request->codigo_proyecto}'"
+                    ],
+                    "cantidad_material" => "required",
+    
+                ]);
+    
+                if ($validatorDataCSV->fails()) {
+                    DB::rollBack();
+                    return ResponseHelper::error(422, $validatorDataCSV->errors()->first(), $validatorDataCSV->errors());
+                }
+    
+                $existencia_presupuesto = Presupuesto::where("inmueble_id", $valueCSV["codigo_inmueble"])
+                    ->where("codigo_proyecto", $request->codigo_proyecto)
+                    ->where("referencia_material", $valueCSV["referencia_material"])->exists();
+    
+                if ($existencia_presupuesto) {
+                    DB::rollBack();
+                    return ResponseHelper::error(
+                        400,
+                        "El presupuesto del inmueble '{$valueCSV['codigo_inmueble']}' con el material '{$valueCSV['referencia_material']}' ya existe en el proyecto '{$request->codigo_proyecto}'"
+                    );
+                }
+                $inmueble = Inmueble::where("id", trim(strtoupper($valueCSV["codigo_inmueble"])))
+                    ->where("estado", "A")
+                    ->first();
+    
+                if (!$inmueble) {
+                    DB::rollBack();
+                    return ResponseHelper::error(
+                        400,
+                        "El inmueble '{$valueCSV['codigo_inmueble']}' no existe"
+                    );
+                }
+    
+                if ($inmueble->codigo_proyecto !== $request->codigo_proyecto) {
+                    DB::rollBack();
+                    return ResponseHelper::error(
+                        400,
+                        "El inmueble '{$valueCSV['codigo_inmueble']}' no pertenece al proyecto '{$request->codigo_proyecto}'"
+                    );
+                }
+    
+    
+                Presupuesto::create(
+                    [
+    
+                        "inmueble_id" => $inmueble->id,
+                        "referencia_material" => trim(strtoupper($valueCSV["referencia_material"])),
+                        "costo_material" => $valueCSV["costo_material"],
+                        "cantidad_material" => $valueCSV["cantidad_material"],
+                        "subtotal" => ($valueCSV["costo_material"] * $valueCSV["cantidad_material"]),
+                        "codigo_proyecto" => $request->codigo_proyecto,
+                        "numero_identificacion" => auth::user()->numero_identificacion,
+                       
+                    ]
                 );
+    
+    
+          
             }
-            $inmueble = Inmueble::where("id", trim(strtoupper($valueCSV["codigo_inmueble"])))
-                ->where("estado", "A")
-                ->first();
+    
+          
+            DB::commit();
+    
+            return ResponseHelper::success(200, "Se ha cargado correctamente");
 
-            if (!$inmueble) {
-                DB::rollBack();
-                return ResponseHelper::error(
-                    400,
-                    "El inmueble '{$valueCSV['codigo_inmueble']}' no existe"
-                );
-
-                // $inmueble = new Inmueble();
-                // // $inmueble->id = trim(strtoupper($valueCSV["codigo_inmueble"]));
-                // $inmueble->codigo_proyecto = trim(strtoupper($valueCSV["codigo_proyecto"]));
-                // $inmueble->tipo_inmueble = $tipo_inmueble->id;
-
-                // $inmueble->numero_identificacion = Auth::user()->numero_identificacion;
-                // $inmueble->save();
-            }
-
-            if ($inmueble->codigo_proyecto !== $request->codigo_proyecto) {
-                DB::rollBack();
-                return ResponseHelper::error(
-                    400,
-                    "El inmueble '{$valueCSV['codigo_inmueble']}' no pertenece al proyecto '{$request->codigo_proyecto}'"
-                );
-            }
-
-
-            Presupuesto::create(
-                [
-
-                    "inmueble_id" => $inmueble->id,
-                    "referencia_material" => trim(strtoupper($valueCSV["referencia_material"])),
-                    "costo_material" => $valueCSV["costo_material"],
-                    "cantidad_material" => $valueCSV["cantidad_material"],
-                    "subtotal" => ($valueCSV["costo_material"] * $valueCSV["cantidad_material"]),
-                    "codigo_proyecto" => $request->codigo_proyecto,
-                    "numero_identificacion" => auth::user()->numero_identificacion,
-                    // "created_at" => Carbon::now(),
-                    // "updated_at" => Carbon::now()
-                ]
-            );
-
-
-            // $datosPresupuestos[] = [
-
-            //     "inmueble_id" => $inmueble->id,
-            //     "referencia_material" => trim(strtoupper($valueCSV["referencia_material"])),
-            //     "costo_material" => $valueCSV["costo_material"],
-            //     "cantidad_material" => $valueCSV["cantidad_material"],
-            //     "subtotal" => ($valueCSV["costo_material"] * $valueCSV["cantidad_material"]),
-            //     "codigo_proyecto" => strtoupper($valueCSV["codigo_proyecto"]),
-            //     "numero_identificacion" => auth::user()->numero_identificacion,
-            //     "created_at" => Carbon::now(),
-            //     "updated_at" => Carbon::now()
-            // ];
+        }catch(Throwable $th){
+            Log::error("Error al cargar el archivo CSV " . $th->getMessage());
+            return ResponseHelper::error(500,"Error interno en el servidor");
         }
-
-        //Presupuesto::insert($datosPresupuestos);
-        DB::commit();
-
-        return ResponseHelper::success(200, "Se ha cargado correctamente", $datosPresupuestos);
+        
     }
 
     public function generateCSV($codigo_proyecto)
