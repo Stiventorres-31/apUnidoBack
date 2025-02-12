@@ -3,17 +3,15 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Casts\Attribute;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Presupuesto extends Model
 {
 
-    protected $table = 'presupuestos';
-    public $incrementing = false;  // La clave primaria es compuesta
-
-    //protected $primaryKey = ["codigo_inmueble", "codigo_proyecto","referencia_material"];
-    protected $primaryKey = null;
+    use HasFactory;
+    protected $table ="presupuestos";
     protected $fillable = [
         'inmueble_id',
         'referencia_material',
@@ -27,10 +25,10 @@ class Presupuesto extends Model
 
     protected $casts = [
         'costo_material' => 'decimal:2',
-        'cantidad_material' => 'decimal',
+        'cantidad_material' => 'decimal:2',
         'subtotal' => 'decimal:2'
-
     ];
+    
 
     protected $hidden = [
         'created_at',
@@ -40,7 +38,7 @@ class Presupuesto extends Model
     // Relación con Inmueble
     public function inmueble(): BelongsTo
     {
-        return $this->belongsTo(Inmueble::class, 'inmueble_id', 'id');
+        return $this->belongsTo(Inmueble::class);
     }
 
     // Relación con Material
@@ -53,6 +51,9 @@ class Presupuesto extends Model
     public function proyecto(): BelongsTo
     {
         return $this->belongsTo(Proyecto::class, 'codigo_proyecto', 'codigo_proyecto');
+    }
+    public function usuario(){
+        return $this->belongsTo(User::class,"numero_identificacion","numero_identificacion");
     }
     // public function totalPresupuesto()
     // {

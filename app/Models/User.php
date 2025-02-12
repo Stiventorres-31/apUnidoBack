@@ -84,4 +84,10 @@ class User extends Authenticatable implements JWTSubject
     public function inmuebles(){
         return $this->hasOne(Inmueble::class);
     }
+    public function presupuestos(){
+        return $this->hasMany(Presupuesto::class,"numero_identificacion","numero_identificacion");
+    }
+    public function asignaciones(){
+        return $this->hasMany(Asignacione::class,"numero_identificacion","numero_identificacion");
+    }
 }

@@ -64,24 +64,25 @@ class AsignacioneController extends Controller
                 }
 
                 //VALIDAR EXISTENCIA ENTRE EL MATERIAL Y EL PRESUPUESTO DEL PROYECTO
-                // $datosPresupuesto = Presupuesto::where("referencia_material", strtoupper(trim($material["referencia_material"])))
-                //     ->where("codigo_proyecto", strtoupper(trim($request->codigo_proyecto)))->first();
+                $datosPresupuesto = Presupuesto::where("referencia_material", strtoupper(trim($material["referencia_material"])))
+                    ->where("codigo_proyecto", strtoupper(trim($request->codigo_proyecto)))->first();
 
-                // $datosPresupuesto = Presupuesto::all();
-                // return $datosPresupuesto;
-                // if (!$datosPresupuesto) {
-                //     DB::rollBack();
-                //     return ResponseHelper::error(422, "El material '{$material["referencia_material"]}' no pertenece al presupesto del proyecto '{$request->codigo_proyecto}'");
-                // }
+
+                if (!$datosPresupuesto) {
+                    DB::rollBack();
+                    return ResponseHelper::error(422, "El material '{$material["referencia_material"]}' no pertenece al presupesto del proyecto '{$request->codigo_proyecto}'");
+                }
+
 
                 //VALIDO SI LA CANTIDAD A ASIGNAR NO SUPERA A LA CANTIDAD DEL PRESUPUESTO
-                // if ($datosPresupuesto->cantidad_material < $material["cantidad_material"]) {
-                //     DB::rollBack();
-                //     return ResponseHelper::error(
-                //         422,
-                //         "El material '{$material["referencia_material"]}' sobre pasa la cantidad del presupuesto"
-                //     );
-                // }
+                if ($datosPresupuesto->cantidad_material < $material["cantidad_material"]) {
+                    DB::rollBack();
+                    return ResponseHelper::error(
+                        422,
+                        "El material '{$material["referencia_material"]}' sobre pasa la cantidad del presupuesto"
+                    );
+                }
+                //return $datosPresupuesto->cantidad_material;
 
                 $estadoMaterial = Materiale::where("referencia_material", $material["referencia_material"])
                     ->where("estado", "A")
@@ -94,12 +95,11 @@ class AsignacioneController extends Controller
                         "El material '{$material["referencia_material"]}' no existe"
                     );
                 }
-               
+
                 //OBTENGO EL INVENTARIO DE LA REFERENCIA DEL MATERIAL CON EL CONSECUTIVO
                 $inventario = Inventario::where("referencia_material", $material["referencia_material"])
                     ->where("consecutivo", $material["consecutivo"])
                     ->first();
-
                 if (!$inventario) {
                     DB::rollBack();
                     return ResponseHelper::error(404, "No se encontró inventario para el material '{$material["referencia_material"]}' con el consecutivo '{$material["consecutivo"]}'");
@@ -111,7 +111,9 @@ class AsignacioneController extends Controller
                 }
 
 
-                $inventario->decrement('cantidad', $material["cantidad_material"]);
+                //$inventario->decrement("cantidad", 4);
+
+
 
                 Asignacione::create([
                     "inmueble_id" => $request->inmueble_id,
@@ -122,9 +124,13 @@ class AsignacioneController extends Controller
                     "subtotal" => $inventario->costo * $material["cantidad_material"],
                     "cantidad_material" => $material["cantidad_material"],
                     "numero_identificacion" => Auth::user()->numero_identificacion
-
                 ]);
+                DB::table('inventarios')
+                    ->where("referencia_material", $material["referencia_material"])
+                    ->where("consecutivo", $material["consecutivo"])
+                    ->decrement("cantidad", $material["cantidad_material"]);
             }
+
             DB::commit();
             return ResponseHelper::success(201, "Se ha registrado con exito");
         } catch (Throwable $th) {

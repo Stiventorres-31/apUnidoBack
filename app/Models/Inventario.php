@@ -25,7 +25,7 @@ class Inventario extends Model
 
     protected $casts = [
         "estado" => "string",
-        "cantidad"=>"integer"
+        "cantidad"=>"decimal:2"
 
     ];
     public function usuarios()
