@@ -143,51 +143,54 @@ class AsignacioneController extends Controller
     public function destroy(Request $request)
     {
         $validatedData = Validator::make($request->all(), [
-            'inmueble_id' => 'required|numeric|exists:inmuebles,id',
-            'referencia_material' => 'required|string|exists:materiales,referencia_material',
-            'codigo_proyecto' => 'required|string|exists:proyectos,codigo_proyecto',
-            "consecutivo" => "required|numeric"
+            "asignacion_id" => "required|exists:asignaciones,id",
+            // 'inmueble_id' => 'required|numeric|exists:inmuebles,id',
+            // 'referencia_material' => 'required|string|exists:materiales,referencia_material',
+            // 'codigo_proyecto' => 'required|string|exists:proyectos,codigo_proyecto',
+            // "consecutivo" => "required|numeric"
         ]);
 
         if ($validatedData->fails()) {
             return ResponseHelper::error(422, $validatedData->errors()->first(), $validatedData->errors());
         }
 
-        DB::beginTransaction();
+
         try {
             // Buscar la asignación con las claves compuestas
-            $asignacion = Asignacione::where([
-                'inmueble_id' => (int) $request->inmueble_id,
-                'referencia_material' => $request->referencia_material,
-                'codigo_proyecto' => strtoupper($request->codigo_proyecto),
-                "consecutivo" => $request->consecutivo
-            ])->delete();
+            // $asignacion = Asignacione::where([
+            //     'inmueble_id' => (int) $request->inmueble_id,
+            //     'referencia_material' => $request->referencia_material,
+            //     'codigo_proyecto' => strtoupper($request->codigo_proyecto),
+            //     "consecutivo" => $request->consecutivo
+            // ])->delete();
+
+            $asignacion = Asignacione::find($request->asignacion_id);
+
 
 
             if (!$asignacion) {
-                DB::rollBack();
+
                 return ResponseHelper::error(404, "No se encontró la asignación.");
             }
 
             // Restaurar stock en el inventario
-            $inventario = Inventario::where([
-                'referencia_material' => $request->referencia_material,
-                'consecutivo' => $request->consecutivo
-            ])->first();
+            DB::table('inventarios')
+                ->where('referencia_material', $asignacion->referencia_material)
+                ->where('consecutivo', $asignacion->consecutivo)
+                ->increment('cantidad', $asignacion->cantidad_material);
 
-            if ($inventario) {
-                $inventario->cantidad += $asignacion->cantidad_material;
-                $inventario->save();
-            }
 
+            
             // Eliminar la asignación
             $asignacion->delete();
 
-            DB::commit();
+
             return ResponseHelper::success(200, "La asignación fue eliminada con éxito.");
         } catch (Throwable $th) {
-            DB::rollBack();
+
             return ResponseHelper::error(500, "Error interno en el servidor", ["error" => $th->getMessage()]);
         }
     }
+
+    
 }

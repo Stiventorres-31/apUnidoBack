@@ -13,7 +13,7 @@ class Asignacione extends Model
     protected $table = 'asignaciones';
 
     protected $fillable = [
-        'id',
+        
         'inmueble_id',
         'codigo_proyecto',
         'referencia_material',
@@ -26,8 +26,8 @@ class Asignacione extends Model
     ];
 
     protected $casts = [
-        'cantidad_material' => 'decimal',
-        'subtotal'=>'decimal',
+        'cantidad_material' => 'decimal:2',
+        'subtotal'=>'decimal:2',
         'costo_material' => 'decimal:2',
     ];
     
