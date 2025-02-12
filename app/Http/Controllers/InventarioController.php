@@ -120,15 +120,15 @@ class InventarioController extends Controller
 
         try {
             
-            $inventarios = Inventario::where("referencia_material", $referencia_material)
+            $inventario = Inventario::where("referencia_material", $referencia_material)
                 ->where("consecutivo", $consecutivo)
                 ->get();
 
-            if (!$inventarios) {
+            if (!$inventario) {
                 return ResponseHelper::error(404, "No se ha encontrado inventario de ese material");
             }
 
-            return ResponseHelper::error(200, "Se ha encontrado inventario de este material", ["inventarios" => $inventarios]);
+            return ResponseHelper::success(200, "Se ha encontrado inventario de este material", ["inventario" => $inventario]);
         } catch (Throwable $th) {
             Log::error("Error al consultar un inventario por referencia del material y consecutivo " . $th->getMessage());
             return ResponseHelper::error(500, "Error interno en el servidor");
