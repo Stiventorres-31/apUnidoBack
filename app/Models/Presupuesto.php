@@ -8,11 +8,11 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Presupuesto extends Model
 {
-    protected $table = 'presupuestos';
 
+    protected $table = 'presupuestos';
     public $incrementing = false;  // La clave primaria es compuesta
 
-    // protected $primaryKey = ["codigo_inmueble", "codigo_proyecto","referencia_material"];
+    //protected $primaryKey = ["codigo_inmueble", "codigo_proyecto","referencia_material"];
     protected $primaryKey = null;
     protected $fillable = [
         'inmueble_id',
@@ -27,7 +27,7 @@ class Presupuesto extends Model
 
     protected $casts = [
         'costo_material' => 'decimal:2',
-        'cantidad_material' => 'float',
+        'cantidad_material' => 'decimal',
         'subtotal' => 'decimal:2'
 
     ];

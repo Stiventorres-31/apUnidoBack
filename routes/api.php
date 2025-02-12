@@ -30,7 +30,7 @@ Route::middleware("auth:api")->group(function(){
         Route::put("/{numero_identificacion}", [UserController::class, 'update']);
         Route::delete("/", [UserController::class, 'destroy']);
     });
-    Route::middleware('auth:api')->prefix('materiale')->group(function () {
+    Route::prefix('materiale')->group(function () {
         Route::get("/", [MaterialeController::class, "index"]);
         Route::get("/{referencia_material}", [MaterialeController::class, "show"]);
         Route::post("/", [MaterialeController::class, "store"]);
@@ -77,6 +77,8 @@ Route::middleware("auth:api")->group(function(){
     
     Route::prefix('asignacion')->group(function () {
         Route::post("/", [AsignacioneController::class, "store"]);
+        Route::delete("/", [AsignacioneController::class, "destroy"]);
+
     });
     Route::prefix('inventario')->group(function () {
         Route::post("/", [InventarioController::class, "store"]);

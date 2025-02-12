@@ -32,11 +32,12 @@ class InventarioController extends Controller
         }
 
         try {
-            // if (!is_string($request->referencia_material)) {
-
-
-            //     return ResponseHelper::error(422, "El campo referencia_material no es válido");
-            // }
+            $existenciaMaterial = Materiale::where("referencia_material",$request->referencia_material)
+            ->where("estado","A")
+            ->exists();
+            if(!$existenciaMaterial){
+                return ResponseHelper::error(404, "El material no existe");
+            }
             $consecutivo = Inventario::where("referencia_material", "=", $request->referencia_material)
                 ->max("consecutivo") ?? 0;
 
@@ -118,6 +119,7 @@ class InventarioController extends Controller
         }
 
         try {
+            
             $inventarios = Inventario::where("referencia_material", $referencia_material)
                 ->where("consecutivo", $consecutivo)
                 ->get();

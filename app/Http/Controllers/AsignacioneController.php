@@ -4,146 +4,184 @@ namespace App\Http\Controllers;
 
 use App\Helpers\ResponseHelper;
 use App\Models\Asignacione;
+use App\Models\Inventario;
 use App\Models\Materiale;
 use App\Models\Presupuesto;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
+use Throwable;
 
 class AsignacioneController extends Controller
 {
     public function store(Request $request)
     {
         $validatedData = Validator::make($request->all(), [
-            'nombre_inmueble'          => 'required|integer|exists:inmuebles,nombre_inmueble',
+            "inmueble_id" => 'required|integer|exists:inmuebles,id',
+            "codigo_proyecto" => "required|exists:proyectos,codigo_proyecto",
             "materiales" => "required|array",
         ]);
 
         if ($validatedData->fails()) {
-            return ResponseHelper::error(422,$validatedData->errors()->first(),$validatedData->errors());
+            return ResponseHelper::error(422, $validatedData->errors()->first(), $validatedData->errors());
         }
-
-        $templateAsingacion=[];
-        foreach ($request->materiales as $material) {
-            $validatedData = Validator::make($material, [
-                'referencia_material'  => 'required|string|max:10|exists:materiales,referencia_material',
-                'codigo_proyecto'      => 'required|string|max:255|exists:proyectos,codigo_proyecto',
-                'cantidad_material'    => 'required|numeric',
-                'costo_material'       => 'required|numeric',
-            ]);
-
-            if ($validatedData->fails()) {
-                return ResponseHelper::error(422,$validatedData->errors()->first(),$validatedData->errors());
-            }
-            // Obtener datos del material
-            $dataMaterial = Materiale::where('referencia_material', $request->referencia_material)->first();
-
-            // if (!$dataMaterial) {
-            //     return response()->json([
-            //         'isError' => true,
-            //         'code' => 404,
-            //         'message' => 'Material no encontrado',
-            //         'result' => []
-            //     ], 404);
-            // }
-
-            // Obtener datos del presupuesto
-            $dataPresupuesto = Presupuesto::where([
-                'nombre_inmueble' => strtoupper($material->nombre_inmueble),
-                'referencia_material' => $material["referencia_material"],
-                'codigo_proyecto' => strtoupper($material["codigo_proyecto"]),
-            ])->first();
-
-            if (!$dataPresupuesto) {
-                return ResponseHelper::error(404,"Asingación no encontrada",["asignacion" => $material]);
-               
-            }
-            // Validar stock de material disponible
-            if ($dataMaterial->cantidad < $material["cantidad_material"]) {
-              
-                return ResponseHelper::error(401,"No está disponible la cantidad que requieres",["asignacion" => $material]);
-            }
-
-
-            // Validar si la cantidad sobrepasa el presupuesto
-            if ($dataPresupuesto->cantidad_material < $material["cantidad_material"]) {
-               
-
-                return ResponseHelper::error(401,"La cantidad sobrepasa el presupuesto",["asignacion" => $material]);
-            }
-            $templateAsingacion[] = [
-                "nombre_inmueble" => strtoupper($request->nombre_inmueble),
-                "codigo_proyecto" => strtoupper($material["codigo_proyecto"]),
-                "referencia_material" => $dataMaterial->referencia_material,
-                "costo_material" => $dataMaterial->costo,
-                "cantidad_material" => $material["cantidad_material"],
-                "numero_identificacion" => Auth::user()->numero_identificacion,
-                "estado" => "A",
-                'created_at' => Carbon::now(),
-                'updated_at' => Carbon::now(),
-            ];
-            // Asignacione::firstOrCreate([
-            //     "nombre_inmueble" => strtoupper($request->nombre_inmueble),
-            //     "codigo_proyecto" => strtoupper($material["codigo_proyecto"]),
-            //     "referencia_material" => $dataMaterial->referencia_material,
-            //     "costo_material" => $dataMaterial->costo,
-            //     "cantidad_material" => $material["cantidad_material"],
-            //     "numero_identificacion" => Auth::user()->numero_identificacion,
-            //     "estado" => "A"
-
-            // ]);
+        $inmuebleExisteEnPresupuesto = Presupuesto::where("inmueble_id", $request->inmueble_id)->exists();
+        if (!$inmuebleExisteEnPresupuesto) {
+            return ResponseHelper::error(422, "El inmueble no tiene un presupuesto asignado");
         }
 
 
+        try {
+            DB::beginTransaction();
+
+            foreach ($request->materiales as $material) {
+                $validatedData = Validator::make($material, [
+                    "referencia_material"  => "required|string|max:10|exists:materiales,referencia_material|exists:presupuestos,referencia_material",
+                    "consecutivo" => "required",
+                    "cantidad_material"    => "required|numeric",
+                    "costo_material"       => "required|numeric",
+                ]);
 
 
-        // Crear asignación
-        // $asignacion = new Asignacione();
 
-        // $asignacion->numero_identificacion = $request->numero_identificacion;
-        // $asignacion->referencia_material = strtoupper($request->referencia_material);
-        // $asignacion->nombre_inmueble = strtoupper($request->nombre_inmueble);
-        // $asignacion->codigo_proyecto = strtoupper($request->codigo_proyecto);
-        // $asignacion->cantidad_material = $request->cantidad_material;
-        // $asignacion->costo_material = $request->costo_material;
-        // $asignacion->estado = "A";
-        // $asignacion->save();
+                if ($validatedData->fails()) {
+                    DB::rollBack();
+                    return ResponseHelper::error(422, $validatedData->errors()->first(), $validatedData->errors());
+                }
 
-        // // Actualizar la cantidad de material disponible
-        // $dataMaterial->cantidad = $dataMaterial->cantidad - $request->cantidad_material;
-        // $dataMaterial->save();
+                $existenciaAsingacion = Asignacione::where("referencia_material", strtoupper(trim($material["referencia_material"])))
+                    ->where("codigo_proyecto", strtoupper(trim($request->codigo_proyecto)))
+                    ->where("consecutivo", $material["consecutivo"])
+                    ->exists();
 
-        Asignacione::insert($templateAsingacion);
-        return ResponseHelper::success(201,"Se ha registrado con exito");
+
+                if ($existenciaAsingacion) {
+                    DB::rollBack();
+                    return ResponseHelper::error(500, "Ya existe asignación del material '{$material["referencia_material"]}' con lote '{$material["consecutivo"]}'");
+                }
+
+                //VALIDAR EXISTENCIA ENTRE EL MATERIAL Y EL PRESUPUESTO DEL PROYECTO
+                // $datosPresupuesto = Presupuesto::where("referencia_material", strtoupper(trim($material["referencia_material"])))
+                //     ->where("codigo_proyecto", strtoupper(trim($request->codigo_proyecto)))->first();
+
+                // $datosPresupuesto = Presupuesto::all();
+                // return $datosPresupuesto;
+                // if (!$datosPresupuesto) {
+                //     DB::rollBack();
+                //     return ResponseHelper::error(422, "El material '{$material["referencia_material"]}' no pertenece al presupesto del proyecto '{$request->codigo_proyecto}'");
+                // }
+
+                //VALIDO SI LA CANTIDAD A ASIGNAR NO SUPERA A LA CANTIDAD DEL PRESUPUESTO
+                // if ($datosPresupuesto->cantidad_material < $material["cantidad_material"]) {
+                //     DB::rollBack();
+                //     return ResponseHelper::error(
+                //         422,
+                //         "El material '{$material["referencia_material"]}' sobre pasa la cantidad del presupuesto"
+                //     );
+                // }
+
+                $estadoMaterial = Materiale::where("referencia_material", $material["referencia_material"])
+                    ->where("estado", "A")
+                    ->first();
+
+                if (!$estadoMaterial) {
+                    DB::rollBack();
+                    return ResponseHelper::error(
+                        404,
+                        "El material '{$material["referencia_material"]}' no existe"
+                    );
+                }
+               
+                //OBTENGO EL INVENTARIO DE LA REFERENCIA DEL MATERIAL CON EL CONSECUTIVO
+                $inventario = Inventario::where("referencia_material", $material["referencia_material"])
+                    ->where("consecutivo", $material["consecutivo"])
+                    ->first();
+
+                if (!$inventario) {
+                    DB::rollBack();
+                    return ResponseHelper::error(404, "No se encontró inventario para el material '{$material["referencia_material"]}' con el consecutivo '{$material["consecutivo"]}'");
+                }
+
+                if ($inventario->cantidad < $material["cantidad_material"]) {
+                    DB::rollBack();
+                    return ResponseHelper::error(400, "No ha suficiente stock para la cantidad requerida del material '{$material["referencia_material"]}'");
+                }
+
+
+                $inventario->decrement('cantidad', $material["cantidad_material"]);
+
+                Asignacione::create([
+                    "inmueble_id" => $request->inmueble_id,
+                    "codigo_proyecto" => strtoupper($request->codigo_proyecto),
+                    "referencia_material" => $inventario->referencia_material,
+                    "costo_material" => $inventario->costo,
+                    "consecutivo" => $inventario->consecutivo,
+                    "subtotal" => $inventario->costo * $material["cantidad_material"],
+                    "cantidad_material" => $material["cantidad_material"],
+                    "numero_identificacion" => Auth::user()->numero_identificacion
+
+                ]);
+            }
+            DB::commit();
+            return ResponseHelper::success(201, "Se ha registrado con exito");
+        } catch (Throwable $th) {
+            DB::rollBack();
+            Log::error("Error al registrar asignaciones " . $th);
+            return ResponseHelper::error(500, "Error interno en el servidor");
+        }
     }
 
     public function destroy(Request $request)
     {
         $validatedData = Validator::make($request->all(), [
-            'nombre_inmueble'         => 'required|string|exists:,nombre_inmueble',
+            'inmueble_id' => 'required|numeric|exists:inmuebles,id',
             'referencia_material' => 'required|string|exists:materiales,referencia_material',
-            'codigo_proyecto'     => 'required|string|exists:proyectos,codigo_proyecto'
+            'codigo_proyecto' => 'required|string|exists:proyectos,codigo_proyecto',
+            "consecutivo" => "required|numeric"
         ]);
 
         if ($validatedData->fails()) {
-            return ResponseHelper::error(422,$validatedData->errors()->first(),$validatedData->errors());
+            return ResponseHelper::error(422, $validatedData->errors()->first(), $validatedData->errors());
         }
 
-        $dataAsignacion = Asignacione::where([
-            'nombre_inmueble' => strtoupper($request->nombre_inmueble),
-            'referencia_material' => $request->referencia_material,
-            'codigo_proyecto' => strtoupper($request->codigo_proyecto),
-        ])->first();
+        DB::beginTransaction();
+        try {
+            // Buscar la asignación con las claves compuestas
+            $asignacion = Asignacione::where([
+                'inmueble_id' => (int) $request->inmueble_id,
+                'referencia_material' => $request->referencia_material,
+                'codigo_proyecto' => strtoupper($request->codigo_proyecto),
+                "consecutivo" => $request->consecutivo
+            ])->delete();
 
 
-        $dataAsignacion->estado = "E";
+            if (!$asignacion) {
+                DB::rollBack();
+                return ResponseHelper::error(404, "No se encontró la asignación.");
+            }
 
-        $material = Materiale::find($request->referencia_material);
+            // Restaurar stock en el inventario
+            $inventario = Inventario::where([
+                'referencia_material' => $request->referencia_material,
+                'consecutivo' => $request->consecutivo
+            ])->first();
 
-        $material->cantidad += $dataAsignacion->cantidad_material;
-        $material->save();
+            if ($inventario) {
+                $inventario->cantidad += $asignacion->cantidad_material;
+                $inventario->save();
+            }
 
-        return ResponseHelper::success(200,"Se ha eliminado con exito");
+            // Eliminar la asignación
+            $asignacion->delete();
+
+            DB::commit();
+            return ResponseHelper::success(200, "La asignación fue eliminada con éxito.");
+        } catch (Throwable $th) {
+            DB::rollBack();
+            return ResponseHelper::error(500, "Error interno en el servidor", ["error" => $th->getMessage()]);
+        }
     }
 }
