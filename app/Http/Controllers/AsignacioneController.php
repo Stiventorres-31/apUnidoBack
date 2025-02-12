@@ -143,7 +143,7 @@ class AsignacioneController extends Controller
     public function destroy(Request $request)
     {
         $validatedData = Validator::make($request->all(), [
-            "asignacion_id"=>"required|exists:asignaciones,id"
+            "asignacion_id" => "required|exists:asignaciones,id"
             // 'inmueble_id' => 'required|numeric|exists:inmuebles,id',
             // 'referencia_material' => 'required|string|exists:materiales,referencia_material',
             // 'codigo_proyecto' => 'required|string|exists:proyectos,codigo_proyecto',
@@ -154,32 +154,85 @@ class AsignacioneController extends Controller
             return ResponseHelper::error(422, $validatedData->errors()->first(), $validatedData->errors());
         }
 
-     
+
         try {
             // Buscar la asignación con las claves compuestas
-            $asignacion= Asignacione::find($request->asignacion_id);
+            $asignacion = Asignacione::find($request->asignacion_id);
 
 
             if (!$asignacion) {
-               
+
                 return ResponseHelper::error(404, "No se encontró la asignación.");
             }
 
             // Restaurar stock en el inventario
             DB::table('inventarios')
-            ->where('referencia_material', $asignacion->referencia_material)
-            ->where('consecutivo', $asignacion->consecutivo)
-            ->increment('cantidad', $asignacion->cantidad_material);
-        
+                ->where('referencia_material', $asignacion->referencia_material)
+                ->where('consecutivo', $asignacion->consecutivo)
+                ->increment('cantidad', $asignacion->cantidad_material);
+
 
             // Eliminar la asignación
             $asignacion->delete();
 
-           
+
             return ResponseHelper::success(200, "La asignación fue eliminada con éxito.");
         } catch (Throwable $th) {
-            
+
             return ResponseHelper::error(500, "Error interno en el servidor", ["error" => $th->getMessage()]);
+        }
+    }
+
+    public function update(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            "asignacion_id" => "required|exists:asignaciones,id",
+            "cantidad_material" => "required|numeric",
+            "accion" => "required"
+        ]);
+
+        if ($validator->fails()) {
+            return ResponseHelper::error(422, $validator->errors()->first(), $validator->errors());
+        }
+
+        try {
+            $asignacion = Asignacione::find($request->asignacion_id);
+
+
+            if ($request->accion === "restar") {
+
+                if ($asignacion->cantidad_material <= $request->cantidad_material) {
+                    $asignacion->cantidad_material -= $request->cantidad_material;
+                    DB::table('inventarios')
+                        ->where('referencia_material', $asignacion->referencia_material)
+                        ->where('consecutivo', $asignacion->consecutivo)
+                        ->increment('cantidad', $request->cantidad_material);
+                } else {
+                    return ResponseHelper::error(401, "La cantidad a disminuir es mayor al stocl actual");
+                }
+            } else {
+                $presupuesto = Presupuesto::where("referencia_material",$asignacion->referencia_materia)
+                ->where("codigo_proyecto",$asignacion->codigo_proyecto)->first();
+
+                //ME FALTA VALIDAR SI EL INVENTARIO A INGRESAR + EL ACTUAL SUPERA EL STOCK DEL PRESUPUESTO  
+
+                if ($asignacion->cantidad_material <= $request->cantidad_material) {
+                    $asignacion->cantidad_material += $request->cantidad_material;
+
+                    DB::table('inventarios')
+                        ->where('referencia_material', $asignacion->referencia_material)
+                        ->where('consecutivo', $asignacion->consecutivo)
+                        ->decrement('cantidad', $request->cantidad_material);
+                } else {
+                    return ResponseHelper::error(401, "La cantidad a disminuir es mayor al stocl actual");
+                }
+            }
+            $asignacion->save();
+
+            return ResponseHelper::success(200, "Se ha actualizado con exito");
+        } catch (Throwable $th) {
+            Log::error("Error al actualizar el asignacion " . $th->getMessage());
+            return ResponseHelper::error(500, "Error interno en el servidor");
         }
     }
 }

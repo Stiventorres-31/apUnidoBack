@@ -77,6 +77,7 @@ Route::middleware("auth:api")->group(function(){
     Route::prefix('asignacion')->group(function () {
         Route::post("/", [AsignacioneController::class, "store"]);
         Route::delete("/", [AsignacioneController::class, "destroy"]);
+        Route::put("/",[AsignacioneController::class,"update"]);
 
     });
     Route::prefix('inventario')->group(function () {
