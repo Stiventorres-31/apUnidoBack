@@ -38,7 +38,7 @@ Route::middleware("auth:api")->group(function(){
         Route::delete("/", [MaterialeController::class, 'destroy']);
     });
     
-    Route::prefix("proyecto")->group(function () {
+    Route::prefix("proyecto")->group(function () {  
         Route::get("/", [ProyectoController::class, 'index']);
         Route::get("/select", [ProyectoController::class, 'select']);
         Route::get("/{codigo_proyecto}", [ProyectoController::class, 'show']);
@@ -46,6 +46,7 @@ Route::middleware("auth:api")->group(function(){
         Route::post("/", [ProyectoController::class, 'store']);
         Route::put("/{codigo_proyecto}", [ProyectoController::class, 'update']);
         Route::delete("/", [ProyectoController::class, 'destroy']);
+        Route::get("/similitud/{codigo_proyecto}" , [ProyectoController::class,"search"]);
         
     });
     

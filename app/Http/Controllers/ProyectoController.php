@@ -168,7 +168,7 @@ class ProyectoController extends Controller
 
     public function update(Request $request, $codigo_proyecto)
     {
-        $validator = Validator::make(["codigo_proyecto"=>$codigo_proyecto], [
+        $validator = Validator::make(["codigo_proyecto" => $codigo_proyecto], [
             "codigo_proyecto" => "required|regex:/^[A-Za-z0-9\-]+$/"
         ]);
 
@@ -251,6 +251,28 @@ class ProyectoController extends Controller
             return ResponseHelper::success(200, "Se ha eliminado con exito");
         } catch (Throwable $th) {
             Log::error("error al eliminar un proyecto " . $th->getMessage());
+            return ResponseHelper::error(500, "Error interno en el servidor");
+        }
+    }
+
+    public function search($codigo_proyecto)
+    {
+        $validator = Validator::make(["codigo_proyecto" => $codigo_proyecto], [
+            "codigo_proyecto" => "required"
+        ]);
+
+        if ($validator->fails()) {
+            return ResponseHelper::error(422, $validator->errors()->first(), $validator->errors());
+        }
+
+        try {
+            //BUSCAR LOS PROYECTO QUE COMIENCEN CON EL VALOR QUE INGRESE EL USUARIO
+            $proyectos = Proyecto::where("codigo_proyecto", "LIKE",  $codigo_proyecto . "%")
+                ->get();
+
+            return ResponseHelper::success(200, "Busqueda exitosa", ["proyectos" => $proyectos]);
+        } catch (Throwable $th) {
+            Log::error("Error al buscar un proyecto por LIKE" . $th->getMessage());
             return ResponseHelper::error(500, "Error interno en el servidor");
         }
     }

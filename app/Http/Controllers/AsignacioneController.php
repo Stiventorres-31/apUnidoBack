@@ -40,9 +40,9 @@ class AsignacioneController extends Controller
             foreach ($request->materiales as $material) {
                 $validatedData = Validator::make($material, [
                     "referencia_material"  => "required|string|max:10|exists:materiales,referencia_material|exists:presupuestos,referencia_material",
-                    "consecutivo" => "required",
-                    "cantidad_material"    => "required|numeric",
-                    "costo_material"       => "required|numeric",
+                    "consecutivo" => "required|size:0",
+                    "cantidad_material"    => "required|numeric|size:0",
+                    "costo_material"       => "required|numeric|size:0",
                 ]);
 
 
