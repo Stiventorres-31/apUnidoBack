@@ -187,7 +187,7 @@ class AsignacioneController extends Controller
     {
         $validator = Validator::make($request->all(), [
             "asignacion_id" => "required|exists:asignaciones,id",
-            "cantidad_material" => "required|numeric",
+            "cantidad_material" => "required|numeric|size:0",
             "accion" => "required"
         ]);
 
@@ -202,21 +202,36 @@ class AsignacioneController extends Controller
             if ($request->accion === "restar") {
 
                 if ($asignacion->cantidad_material <= $request->cantidad_material) {
+
                     $asignacion->cantidad_material -= $request->cantidad_material;
+                    if ($asignacion->cantidad_material < 0) {
+                        return ResponseHelper::error(400, "La cantidad es menor a 0, por favor ingrese la cantidad correcta");
+                    }
+
                     DB::table('inventarios')
                         ->where('referencia_material', $asignacion->referencia_material)
                         ->where('consecutivo', $asignacion->consecutivo)
                         ->increment('cantidad', $request->cantidad_material);
                 } else {
-                    return ResponseHelper::error(401, "La cantidad a disminuir es mayor al stocl actual");
+                    return ResponseHelper::error(400, "La cantidad a disminuir es mayor al stock actual");
                 }
             } else {
-                $presupuesto = Presupuesto::where("referencia_material",$asignacion->referencia_materia)
-                ->where("codigo_proyecto",$asignacion->codigo_proyecto)->first();
+                $presupuesto = Presupuesto::where("referencia_material", $asignacion->referencia_material)
+                    ->where("codigo_proyecto", $asignacion->codigo_proyecto)
+                    ->where("inmueble_id", $asignacion->inmueble_id)
+                    ->first();
+
+                $sumaCantidadAcualCantidadNuevo = $asignacion->cantidad_material +  $request->cantidad_material;
+
+
+                if ($sumaCantidadAcualCantidadNuevo >= $presupuesto->cantidad_material) {
+                    return ResponseHelper::error(400, "La suma supera el stock presupuestado");
+                }
 
                 //ME FALTA VALIDAR SI EL INVENTARIO A INGRESAR + EL ACTUAL SUPERA EL STOCK DEL PRESUPUESTO  
 
                 if ($asignacion->cantidad_material <= $request->cantidad_material) {
+
                     $asignacion->cantidad_material += $request->cantidad_material;
 
                     DB::table('inventarios')
