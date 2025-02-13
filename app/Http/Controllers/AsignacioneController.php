@@ -4,15 +4,18 @@ namespace App\Http\Controllers;
 
 use App\Helpers\ResponseHelper;
 use App\Models\Asignacione;
+use App\Models\Inmueble;
 use App\Models\Inventario;
 use App\Models\Materiale;
 use App\Models\Presupuesto;
+use App\Models\Proyecto;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
+use League\Csv\Reader;
 use Throwable;
 
 class AsignacioneController extends Controller
@@ -180,6 +183,141 @@ class AsignacioneController extends Controller
         } catch (Throwable $th) {
 
             return ResponseHelper::error(500, "Error interno en el servidor", ["error" => $th->getMessage()]);
+        }
+    }
+
+    public function fileMasivo(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            "file" => "required|file",
+            "codigo_proyecto" => "required|exists:asignaciones,codigo_proyecto"
+        ]);
+        if ($validator->fails()) {
+            return ResponseHelper::error(422, $validator->errors()->first(), $validator->errors());
+        }
+
+        $cabecera = [
+            "inmueble_id",
+            "referencia_material",
+            "consecutivo",
+            "cantidad_material"
+        ];
+
+        $file = $request->file('file');
+        $filePath = $file->getRealPath();
+
+        $archivoCSV = Reader::createFromPath($filePath, "r");
+        $archivoCSV->setDelimiter(';');;
+        $archivoCSV->setHeaderOffset(0); //obtenemos la cabecera
+
+
+        $archivoCabecera = $archivoCSV->getHeader();
+
+        if ($archivoCabecera !== $cabecera) {
+            return ResponseHelper::error(422, "El archivo no tiene la estructura requerida");
+        }
+
+
+        try {
+            DB::beginTransaction();
+            foreach ($archivoCSV->getRecords() as $datoAsignacionCSV) {
+                $validatorDataCSV = Validator::make($datoAsignacionCSV, [
+                    "inmueble_id" => "required",
+                    "consecutivo" => "required|min:1",
+                    "referencia_material" => [
+                        "required",
+                        function ($attribute, $value, $fail) {
+                            $referencia_material = strtoupper($value);
+                            if (!Materiale::where("referencia_material",  $referencia_material)
+                                ->where("estado", "A")
+                                ->exists()) {
+                                $fail("La referencia del material '{$referencia_material}' no existe");
+                            }
+                        }
+                    ],
+                    "cantidad_material" => "required|numeric|min:1",
+                ]);
+
+                if ($validatorDataCSV->fails()) {
+                    DB::rollBack();
+                    return ResponseHelper::error(422, $validatorDataCSV->errors()->first(), $validatorDataCSV->errors());
+                }
+
+                $proyecto = Proyecto::find(strtoupper(trim($request->codigo_proyecto)))->exists();
+                if (!$proyecto) {
+                    DB::rollback();
+                    return ResponseHelper::error(404, "El proyecto no existe");
+                }
+                $presupuesto = Presupuesto::where("referencia_material", $datoAsignacionCSV["referencia_material"])
+                    ->where("codigo_proyecto", $request->codigo_proyecto)
+                    ->where("inmueble_id", $datoAsignacionCSV["inmueble_id"])
+                    ->first();
+
+                if (!$presupuesto) {
+                    DB::rollBack();
+                    return ResponseHelper::error(404, "No existe prespuesto para este inmueble '{$datoAsignacionCSV["inmueble_id"]}' con este material '{$datoAsignacionCSV["referencia_material"]}'");
+                }
+                $inventario = Inventario::where("referencia_material", $presupuesto->referencia_material)
+                    ->where("consecutivo", $datoAsignacionCSV["consecutivo"])->first();
+
+                if (!$inventario) {
+                    DB::rollBack();
+                    return ResponseHelper::error(
+                        404,
+                        "No existe lote de este '{$datoAsignacionCSV["referencia_material"]}' con lote '{$datoAsignacionCSV["consecutivo"]}'"
+                    );
+                }
+                $inmueble = Inmueble::where("id", $datoAsignacionCSV["inmueble_id"])
+                    ->where("codigo_proyecto", $request->codigo_proyecto)
+                    ->first();
+
+                if (!$inmueble) {
+                    DB::rollBack();
+                    return ResponseHelper::error(404, "El inmueble '{$datoAsignacionCSV["inmueble_id"]}' no existe para este proyecto '{$request->codigo_proyecto}'");
+                }
+
+                //CALCULAR SI LA CANTIDAD ACTUAL Y LA ASIGNAR NO SUPERA A LA DEL PRESUPUESTO
+
+                $cantidadAsignadoActualmente = Asignacione::where("referencia_material", $inventario->referencia_material)
+                    ->where("inmueble_id", $datoAsignacionCSV["inmueble_id"])
+                    ->where("consecutivo", $inventario->consecutivo)
+                    ->max("cantidad_material") ?? 0;
+
+                $calcularCantidadTotal = $cantidadAsignadoActualmente +$datoAsignacionCSV["cantidad_material"];
+
+                if($calcularCantidadTotal>$presupuesto->cantidad_material){
+                    DB::rollback();
+                    return ResponseHelper::error(400,
+                    "La cantidad a asignar del material '{$datoAsignacionCSV["referencia_material"]}' 
+                    al inmueble '{$datoAsignacionCSV["inmueble_id"]}' supera el stock del presupuesto");
+                }
+
+                return "firme";
+                // if()
+                return [
+                    "proyecto" => $proyecto,
+                    "presupuesto" => $presupuesto,
+                    "inventario" => $inventario,
+                    "inmueble" => $inmueble,
+                ];
+
+                Asignacione::create([
+                    "inmueble_id" => $datoAsignacionCSV["inmueble_id"],
+                    "referencia_material" => $inventario->referencia_material,
+                    "consecutivo" => $inventario->consecutivo,
+                    "costo_material" => $inventario->consecutivo,
+                    "cantidad_material" => $datoAsignacionCSV["cantidad_material"],
+                    "subtotal" => $inventario->costo * $datoAsignacionCSV["cantidad_material"],
+                    "codigo_proyecto" => $proyecto->codigo_proyecto,
+                ]);
+            }
+
+            DB::commit();
+            return responseHelper::success(201, "Se han creado con exito");
+        } catch (Throwable $th) {
+            DB::rollback();
+            Log::error("Error al registrar las asignaciones masivamente " . $th->getMessage());
+            return ResponseHelper::error(500, "Error interno en el servidor");
         }
     }
 

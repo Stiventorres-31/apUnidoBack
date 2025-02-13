@@ -73,12 +73,14 @@ Route::middleware("auth:api")->group(function(){
         Route::put("/", [PresupuestoController::class, "update"]);
         Route::get("/report/{codigo_proyecto}", [PresupuestoController::class, "generateCSV"]);
         Route::delete("/", [PresupuestoController::class, "destroy"]);
+
     });
     
     Route::prefix('asignacion')->group(function () {
         Route::post("/", [AsignacioneController::class, "store"]);
         Route::delete("/", [AsignacioneController::class, "destroy"]);
         Route::put("/",[AsignacioneController::class,"update"]);
+        Route::post("/file",[AsignacioneController::class,"fileMasivo"]);
 
     });
     Route::prefix('inventario')->group(function () {

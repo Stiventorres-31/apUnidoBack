@@ -10,7 +10,6 @@ class Materiale extends Model
 {
 
     protected $fillable =[
-        
         "referencia_material",
         "nombre_material",
         "numero_identificacion",
