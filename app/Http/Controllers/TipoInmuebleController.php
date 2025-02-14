@@ -91,7 +91,7 @@ class TipoInmuebleController extends Controller
             $tipoInmueble = TipoInmueble::find($id);
 
             $tipoInmueble->update([
-                'nombre_tipo_inmueble' => $request->nombre_tipo_inmueble
+                'nombre_tipo_inmueble' => strtoupper(trim($request->nombre_tipo_inmueble))
             ]);
 
 
