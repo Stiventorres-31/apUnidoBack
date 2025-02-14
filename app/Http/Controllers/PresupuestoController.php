@@ -129,7 +129,7 @@ class PresupuestoController extends Controller
             return ResponseHelper::success(201, "Se ha creado con exito");
         } catch (Throwable $th) {
             Log::error("Error al registrar un presupuesto " . $th->getMessage());
-            return ResponseHelper::error(500, "Error interno en el servido");
+            return ResponseHelper::error(500, "Error interno en el servido",["error"=>$th->getMessage()]);
         }
     }
 
