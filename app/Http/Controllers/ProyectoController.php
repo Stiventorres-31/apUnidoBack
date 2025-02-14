@@ -120,7 +120,7 @@ class ProyectoController extends Controller
             return ResponseHelper::success(200, "Proyecto obtenido", ["proyecto" => $proyectoArray]);
         } catch (Throwable $th) {
             Log::error("error al consultar un proyecto con el presupuesto " . $th->getMessage());
-            return ResponseHelper::error(500, "Error interno en el servidor");
+            return ResponseHelper::error(500, "Error interno en el servidor",["error"=>$th->getMessage()]);
         }
 
 
