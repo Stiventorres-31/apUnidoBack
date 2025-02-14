@@ -26,7 +26,7 @@ class Presupuesto extends Model
     protected $casts = [
         'costo_material' => 'decimal',
         'cantidad_material' => 'decimal',
-        'subtotal' => 'decimal:2'
+        'subtotal' => 'decimal'
     ];
     
 
