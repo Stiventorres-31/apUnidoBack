@@ -19,7 +19,7 @@ return new class extends Migration
             $table->string("numero_identificacion",20);
             
             $table->decimal("costo_material");
-            $table->decimal("subtotal");
+            $table->unsignedBigInteger("subtotal");
             $table->decimal("cantidad_material");
             $table->string("codigo_proyecto",10);
 

@@ -115,9 +115,9 @@ class PresupuestoController extends Controller
                     "inmueble_id" => strtoupper($request->inmueble_id),
                     "codigo_proyecto" => strtoupper($request->codigo_proyecto),
                     "referencia_material" => $dataMaterial->referencia_material,
-                    "costo_material" => $inventario->costo,
+                    "costo_material" => $material["costo_material"],
                     "cantidad_material" => $material["cantidad_material"],
-                    "subtotal" => floatval($inventario->costo * $material["cantidad_material"]),
+                    "subtotal" => ($material["costo_material"] * $material["cantidad_material"]),
 
                     "numero_identificacion" => $numero_identificacion
                 ]);
