@@ -18,9 +18,9 @@ return new class extends Migration
             $table->string("referencia_material",10);
             $table->string("numero_identificacion",20);
             
-            $table->decimal("costo_material",10,2);
-            $table->decimal("subtotal",10,2);
-            $table->decimal("cantidad_material",10,2);
+            $table->decimal("costo_material");
+            $table->decimal("subtotal");
+            $table->decimal("cantidad_material");
             $table->string("codigo_proyecto",10);
 
             // $table->unsignedBigInteger("consecutivo",false);

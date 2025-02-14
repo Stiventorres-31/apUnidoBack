@@ -20,10 +20,10 @@ return new class extends Migration
             $table->string("numero_identificacion",20);
             $table->unsignedInteger("consecutivo");
             
-            $table->decimal("costo_material",10,2);
-            $table->decimal("subtotal",10,2);
+            $table->decimal("costo_material");
+            $table->decimal("subtotal");
             $table->decimal("cantidad_material");
-            $table->string("codigo_proyecto");
+            $table->string("codigo_proyecto",10);
 
             // $table->char("estado",1)->default("A");
             //$table->enum("estado", ["A", "I"])->default("A");

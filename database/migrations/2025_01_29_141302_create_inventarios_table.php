@@ -18,7 +18,7 @@ return new class extends Migration
             
             $table->primary(["referencia_material","consecutivo"]);
 
-            $table->decimal("costo",10,2);
+            $table->decimal("costo");
             $table->string("cantidad");
             $table->string("nit_proveedor");
             $table->string("nombre_proveedor");
