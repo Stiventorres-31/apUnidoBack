@@ -58,8 +58,8 @@ class UserController extends Controller
         try {
             $usuario = new User();
             $usuario->numero_identificacion = $request->numero_identificacion;
-            $usuario->nombre_completo = strtoupper($request->nombre_completo);
-            $usuario->password = ($request->password);
+            $usuario->nombre_completo = strtoupper(trim($request->nombre_completo));
+            $usuario->password = $request->password;
             // $usuario->password = hash::make($request->password);
             $usuario->rol_usuario = strtoupper($request->rol_usuario["name"]);
             $usuario->estado = 'A';
@@ -95,8 +95,8 @@ class UserController extends Controller
                 return ResponseHelper::error(404, "El usuario no existe", []);
             }
     
-            $usuario->nombre_completo = strtoupper($request->input("nombre_completo"));
-            $usuario->rol_usuario = strtoupper($request->input("rol_usuario")["name"]);
+            $usuario->nombre_completo = strtoupper(trim($request->nombre_completo));
+            $usuario->rol_usuario = strtoupper($request->rol_usuario["name"]);
             $usuario->save();
     
             return ResponseHelper::success(200, "Usuario ha actualizado exitosamente.", ["usuario" => $usuario]);

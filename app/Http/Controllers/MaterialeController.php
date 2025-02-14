@@ -135,7 +135,7 @@ class MaterialeController extends Controller
             }
 
             $materiale->update([
-                'nombre_material' => trim($request->nombre_material)
+                'nombre_material' => strtoupper(trim($request->nombre_material))
             ]);
 
             return ResponseHelper::success(200, "Material actualizado exitosamente", ['materiale' => $materiale]);
