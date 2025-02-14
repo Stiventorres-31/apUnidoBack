@@ -283,16 +283,28 @@ class AsignacioneController extends Controller
                     ->where("consecutivo", $inventario->consecutivo)
                     ->max("cantidad_material") ?? 0;
 
-                $calcularCantidadTotal = $cantidadAsignadoActualmente +$datoAsignacionCSV["cantidad_material"];
+                $calcularCantidadTotal = $cantidadAsignadoActualmente + $datoAsignacionCSV["cantidad_material"];
 
                 if($calcularCantidadTotal>$presupuesto->cantidad_material){
                     DB::rollback();
                     return ResponseHelper::error(400,
-                    "La cantidad a asignar del material '{$datoAsignacionCSV["referencia_material"]}' 
-                    al inmueble '{$datoAsignacionCSV["inmueble_id"]}' supera el stock del presupuesto");
+                    "La cantidad a asignar del material '{$datoAsignacionCSV["referencia_material"]}' al inmueble '{$datoAsignacionCSV["inmueble_id"]}' supera el stock del presupuesto");
                 }
 
+                //VERIFICAR SI HAY STOCK DISPONIBLE
+
+                if($datoAsignacionCSV["cantidad_material"] > $inventario->cantidad ){
+                    return ResponseHelper::error(422, "La cantidad del material '{$inventario->referencia_material}' a asignar super el stock del invenario");
+                }
+
+                //REALIZAR EL DESCUENTO DEL INVENTARIO
+
+                
+
                 return "firme";
+
+                $inventario->cantidad -= $datoAsignacionCSV["cantidad_material"];
+                $inventario->save();
                 // if()
                 return [
                     "proyecto" => $proyecto,

@@ -189,7 +189,7 @@ class PresupuestoController extends Controller
             return ResponseHelper::success(200, "Se ha actualizado con exito");
         } catch (Throwable $th) {
             Log::error("Error al actualizar un presupuesto " . $th->getMessage());
-            return ResponseHelper::error(500, "Error interno en el servidor");
+            return ResponseHelper::error(500, "Error interno en el servidor", ["error"=>$th->getMessage()]);
         }
     }
 
