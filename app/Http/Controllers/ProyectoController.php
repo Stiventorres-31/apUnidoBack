@@ -112,7 +112,7 @@ class ProyectoController extends Controller
             $proyectoArray = $proyecto->toArray();
 
 
-            foreach ($proyectoArray['inmuebles'] as &$inmueble) {
+            foreach ($proyectoArray['inmuebles'] as $inmueble) {
                 $inmueble['total_presupuesto'] = collect($inmueble['presupuestos'])->sum('subtotal');
                 unset($inmueble['presupuestos']);
             }
