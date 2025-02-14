@@ -154,7 +154,7 @@ class ProyectoController extends Controller
             $proyectoArray = $proyecto->toArray();
 
 
-            foreach ($proyectoArray['inmuebles'] as &$inmueble) {
+            foreach ($proyectoArray['inmuebles'] as $inmueble) {
                 $inmueble['total_presupuesto'] = collect($inmueble['presupuestos'])->sum('subtotal');
                 unset($inmueble['presupuestos']);
             }
@@ -162,7 +162,7 @@ class ProyectoController extends Controller
             return ResponseHelper::success(200, "Proyecto obtenido", ["proyecto" => $proyectoArray]);
         } catch (Throwable $th) {
             Log::error("error al consultar un proyecto " . $th->getMessage());
-            return ResponseHelper::error(500, "Error interno en el servidor");
+            return ResponseHelper::error(500, "Error interno en el servidor", ["error"=>$th->getMessage()]);
         }
     }
 
